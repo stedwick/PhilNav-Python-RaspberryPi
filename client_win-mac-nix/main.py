@@ -51,6 +51,7 @@ sock.bind((args.host, args.port)) # Register our socket
 # It will be something like 192.x.x.x or 10.x.x.x
 # This is not your public Internet address. This is your local area network address.
 # On Windows, make sure it's set to a private network to allow discovery.
+# You'd think public would allow discovery, but when you are *in public* - like at a coffee shop - you don't want strangers to access your PC.
 text_listening = f"Listening on {sock.getsockname()} for mouse data from Raspberry Pi server..."
 print(ctime() + " - " + text_listening)
 print("\nPress Ctrl-C to exit\n")
@@ -94,18 +95,21 @@ while True:
 
     # The Magic Happens Now! eg. move mouse cursor =P
     pt = POINT()
-    ctypes.windll.user32.GetCursorPos(ctypes.byref(pt)) # get current mouse position
+    ctypes.windll.user32.GetCursorPos(ctypes.byref(pt)) # get current mouse position by reference (C++ thing)
     # I'm moving the Y axis slightly faster because looking left and right is easier than nodding up and down.
-    ctypes.windll.user32.SetCursorPos(round(pt.x+x*args.speed), round(pt.y+y*args.speed*1.33)) # move mouse cursor
+    # Also, monitors are wider than they are tall.
+    x_new = round(pt.x + x*args.speed)
+    y_new = round(pt.y + y*args.speed*1.33)
+    ctypes.windll.user32.SetCursorPos(x_new, y_new) # move mouse cursor
 
     # I'm trying to measure the total time from capturing the frame on the camera to moving the mouse cursor on my PC. This isn't super accurate. It's sometimes negative (TIME TRAVEL!!!). The clock difference between the Raspberry Pi and my PC seems to be around 10-20ms?
     time_diff_ms = int((time() - roll)*1000)
 
     # it's 60 FPS, so only debug once per second
     if time() - PhilNavDebug.time_debug > 1:
+      PhilNavDebug.time_debug = time()
       PhilNavDebug.debug_num += 1
       # display legend every 5 seconds
       if PhilNavDebug.debug_num % 5 == 1:
-        logging.info(f" {ctime()} - Received: ({"x_diff":>8},{"y_diff":>8},{"n/a":>8},{"n/a":>8},{"loc ns":>8},{"net ms":>8})")
-      logging.info(f" {ctime()} - Received: ({x:> 8.2f},{y:> 8.2f},{z:> 8.2f},{pitch:> 8.2f},{(time() - PhilNavDebug.msg_time_start)*1000:> 8.2f},{time_diff_ms:> 8})")
-      PhilNavDebug.time_debug = time()
+        logging.info(f" {ctime()} - Received: ({"x_diff":>8},{"y_diff":>8},{"n/a":>8},{"n/a":>8},{"loc ns":>8},{"net ms":>8}  )")
+      logging.info(f" {ctime()} - Received: ({x:> 8.2f},{y:> 8.2f},{z:> 8.2f},{pitch:> 8.2f},{(time() - PhilNavDebug.msg_time_start)*1000:> 8.2f},{time_diff_ms:> 8}  )")
