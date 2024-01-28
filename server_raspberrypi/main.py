@@ -75,11 +75,12 @@ else:
 config_main = {
     "size": (args.width, args.height)
 }
-if not args.no_hflip:
-    config_main["transform"] = Transform(hflip=1)
 picam2 = Picamera2()
 # Not entirely sure how configurations work, preview/main etc.
-config = picam2.create_preview_configuration(main=config_main)
+hflip_num = 1
+if args.no_hflip:
+    hflip_num = 0
+config = picam2.create_preview_configuration(main=config_main, transform=Transform(hflip=hflip_num))
 picam2.configure(config)
 
 controls_main = {
@@ -99,11 +100,20 @@ else:
 
 # Not entirely sure the difference between start_preview and start.
 picam2.start()
-time.sleep(1)  # let camera warm up
+sleep(1)  # let camera warm up
 
 # OpenCV blob detection config
 params = cv2.SimpleBlobDetector_Params()
+params.filterByColor = True
+params.filterByArea = True
 params.blobColor = args.blob_color
+params.minArea = 25
+params.minThreshold = 150
+params.minRepeatability = 3
+params.filterByCircularity = False
+params.filterByConvexity = False
+params.filterByInertia = False
+params.minDistBetweenBlobs = 100
 detector = cv2.SimpleBlobDetector_create(params)
 
 # Set up UDP socket to receiving computer
@@ -120,7 +130,6 @@ class PhilNav:
     x = 0.0
     y = 0.0
     keypoint = None  # for debugging inspection
-
 
 # This is where the Magic happens! The camera should pick up nothing but a white
 # dot from your reflective IR sticker. I use opencv blob detection to track its
@@ -183,12 +192,11 @@ def blobby(request):
                 sock.sendto(MESSAGE, (args.ip, args.port))
 
         # Log once per second
-        if PhilNav.frame_nume % args.fps == 0:
+        if PhilNav.frame_num % args.fps == 0:
             fps = PhilNav.frame_num / (time() - PhilNav.started_at)
             ms = (perf_counter() - PhilNav.frame_start) * 1000
             logging.info(
-                f"Frame: {PhilNav.frame_num}, Diff: ({int(x_diff)}, {int(y_diff)}), FPS: {
-                    int(fps)}, loc ms: {int(ms)}"
+                f"Frame: {PhilNav.frame_num}, Diff: ({int(x_diff)}, {int(y_diff)}), FPS: {int(fps)}, loc ms: {int(ms)}"
             )
 
         # I'm setting these at the end rather than the beginning, because I want
