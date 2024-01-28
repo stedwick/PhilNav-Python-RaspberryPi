@@ -111,5 +111,5 @@ while True:
       PhilNavDebug.debug_num += 1
       # display legend every 5 seconds
       if PhilNavDebug.debug_num % 5 == 1:
-        logging.info(f" {ctime()} - Received: ({"x_diff":>8},{"y_diff":>8},{"n/a":>8},{"n/a":>8},{"loc ns":>8},{"net ms":>8}  )")
+        logging.info(f" {ctime()} - Received: ({'x_diff':>8},{'y_diff':>8},{'n/a':>8},{'n/a':>8},{'loc ns':>8},{'net ms':>8}  )")
       logging.info(f" {ctime()} - Received: ({x:> 8.2f},{y:> 8.2f},{z:> 8.2f},{pitch:> 8.2f},{(time() - PhilNavDebug.msg_time_start)*1000:> 8.2f},{time_diff_ms:> 8}  )")
