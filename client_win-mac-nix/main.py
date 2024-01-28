@@ -2,9 +2,13 @@ import argparse
 import logging
 from time import time, ctime
 from dataclasses import dataclass
+from collections import deque  # for storing x, y time series
+import numpy as np  # for smoothing moving average
 import ctypes  # for windows mouse
 import socket  # udp networking
 import struct  # binary unpacking
+# Done: Windows
+# TODO: Mac, Linux
 
 print("\n\nCLIENT: Starting PhilNav\n")
 
@@ -24,9 +28,15 @@ parser.add_argument(
     "-p", "--port", type=int, default=4245, help="bind to port, default 4245"
 )
 parser.add_argument(
-    "-s", "--speed", type=int, default=30, help="mouse speed, default 30"
+    "-s", "--speed", type=int, default=25, help="mouse speed, default 25"
+)
+parser.add_argument(
+    "-S", "--smooth", type=int, default=3, help="averages mouse movements to smooth out jittering, default 3"
 )
 args = parser.parse_args()
+if args.smooth < 1:
+    args.smooth = 1
+
 
 if args.verbose:
     logging.getLogger().setLevel(logging.DEBUG)
@@ -73,6 +83,16 @@ class PhilNav:
     msg_time_start = time()
     msg_time_total = 0
     msg_num = 0
+    x_q = deque([], args.smooth)
+    y_q = deque([], args.smooth)
+    x_q_long = deque([], args.smooth*3)
+    y_q_long = deque([], args.smooth*3)
+
+
+def smooth(q):
+    sum = np.sum(q)
+    avg = sum / len(q)
+    return avg
 
 
 # Main event loop:
@@ -101,6 +121,21 @@ while True:
         #  x_diff, y_diff, n/a, n/a, n/a, camera capture time
         x, y, z, pitch, yaw, roll = struct.unpack("dddddd", data)
 
+        # Simple moving average to smooth out jitters
+        PhilNav.x_q.append(x)
+        PhilNav.y_q.append(y)
+        PhilNav.x_q_long.append(x)
+        PhilNav.y_q_long.append(y)
+        if x**2 + y**2 < 0.2:
+            x_smooth = smooth(PhilNav.x_q_long)
+            y_smooth = smooth(PhilNav.y_q_long)
+        elif x**2 + y**2 < 0.5:
+            x_smooth = smooth(PhilNav.x_q)
+            y_smooth = smooth(PhilNav.y_q)
+        else:
+            x_smooth = x
+            y_smooth = y
+
         # The Magic Happens Now! eg. move mouse cursor =P
         pt = POINT()
         ctypes.windll.user32.GetCursorPos(
@@ -109,8 +144,8 @@ while True:
         # I'm moving the Y axis slightly faster because looking left and right
         # is easier than nodding up and down. Also, monitors are wider than they
         # are tall.
-        x_new = round(pt.x + x * args.speed)
-        y_new = round(pt.y + y * args.speed * 1.33)
+        x_new = round(pt.x + x_smooth * args.speed)
+        y_new = round(pt.y + y_smooth * args.speed * 1.25)
         ctypes.windll.user32.SetCursorPos(x_new, y_new)  # move mouse cursor
 
         # I'm trying to measure the total time from capturing the frame on the
