@@ -1,133 +1,209 @@
-import cv2
-import numpy
-from picamera2 import Picamera2, Preview, MappedArray
-from libcamera import Transform
-import time
+import argparse
 import logging
-import inspect
-import socket
-import struct
+from time import time, perf_counter, sleep
+from dataclasses import dataclass
+import socket  # udp networking
+import struct  # binary packing
+from picamera2 import Picamera2, Preview, MappedArray  # Raspberry Pi camera
+from libcamera import Transform  # taking selfies, so used to mirror image
+import cv2  # OpenCV, for blob detection
 
-# from keyboard import is_pressed
+print("\n\nSERVER: Starting PhilNav\n")
 
+preview_text = "Adjust the camera controls listed with --help such that you get a mostly black picture with bright white reflective IR sticker in the center. The controls default to what worked for me via trial and error."
+
+# parse command line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--ip",
+    required=True,
+    type=str,
+    help="remote ip address of PC that will receive mouse movements",
+)
+parser.add_argument(
+    "-p", "--port", type=int, default=4245, help="send to remote port, default 4245"
+)
+parser.add_argument(
+    "-v", "--verbose", action="store_true", help="provide verbose logging"
+)
+parser.add_argument(
+    "--preview", action="store_true", help="Use when logged into Raspberry Pi Gui; will show camera preview. " + preview_text
+)
+parser.add_argument(
+    "--fps", type=float, default=75.0, help="camera FrameRate, default 75"
+)
+parser.add_argument(
+    "--width", type=int, default=320, help="camera resolution width, default 320"
+)
+parser.add_argument(
+    "--height", type=int, default=240, help="camera resolution height, default 240"
+)
+parser.add_argument(
+    "--gain", type=float, default=2.0, help="camera AnalogueGain, default 2.0"
+)
+parser.add_argument(
+    "--brightness", type=float, default=-0.4, help="camera Brightness, default -0.4"
+)
+parser.add_argument(
+    "--contrast", type=float, default=5.0, help="camera Contrast, default 5.0"
+)
+parser.add_argument(
+    "--exposure", type=float, default=1.0, help="camera ExposureValue, default 1.0"
+)
+parser.add_argument(
+    "--saturation", type=float, default=0.0, help="camera Saturation, default 0.0"
+)
+parser.add_argument(
+    "--no-hflip", action="store_true", help="images are selfies and flipped horizontally by default"
+)
+parser.add_argument(
+    "--blob-color", type=int, default=255, help="OpenCV blob detection color, default 255 (white; I believe it's grayscale 0-255)"
+)
+args = parser.parse_args()
+
+if args.verbose:
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.info(" Logging verbosely\n")
+
+if args.preview:
+    print(preview_text + "\n")
+else:
+    print("If running PhilNav for the first time, use --help and --preview to set up your camera.\n")
+
+# The camera can be configured and controlled with different settings in each.
+# Not entirely sure the difference.
+config_main = {
+    "size": (args.width, args.height)
+}
+if not args.no_hflip:
+    config_main["transform"] = Transform(hflip=1)
 picam2 = Picamera2()
-config = picam2.create_preview_configuration(
-    main={"size": (320, 240)}, transform=Transform(hflip=1)
-)
+# Not entirely sure how configurations work, preview/main etc.
+config = picam2.create_preview_configuration(main=config_main)
 picam2.configure(config)
-picam2.set_controls(
-    {
-        "AnalogueGain": 2.0,
-        "Brightness": -0.4,
-        "Contrast": 5,
-        "ExposureValue": 1,
-        "Saturation": 0,
-        "FrameRate": 85,
-    }
-)
-picam2.start_preview(Preview.QT)
-# picam2.start_preview(Preview.NULL)
-picam2.start()
-time.sleep(1)
 
+controls_main = {
+    "AnalogueGain": args.gain,
+    "Brightness": args.brightness,
+    "Contrast": args.contrast,
+    "ExposureValue": args.exposure,
+    "Saturation": args.saturation,
+    "FrameRate": args.fps
+}
+picam2.set_controls(controls_main)
+
+if args.preview:
+    picam2.start_preview(Preview.QT)
+else:
+    picam2.start_preview(Preview.NULL)
+
+# Not entirely sure the difference between start_preview and start.
+picam2.start()
+time.sleep(1)  # let camera warm up
+
+# OpenCV blob detection config
 params = cv2.SimpleBlobDetector_Params()
-params.blobColor = 255
+params.blobColor = args.blob_color
 detector = cv2.SimpleBlobDetector_create(params)
 
-# UDP_IP = "192.168.68.71"
-UDP_IP = "10.10.113.22"
-UDP_PORT = 4245
-MESSAGE = None
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-frame = 0
-x = 0
-y = 0
-keypoints = None
-started_at_ms = time.time() * 1000
-frame_start_ms = time.time() * 1000
+# Set up UDP socket to receiving computer
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # datagrams over UDP
 
 
+# Globals for storing data from loop-to-loop, also stats for debugging
+@dataclass
+class PhilNav:
+    started_at = time()
+    frame_started_at = time()
+    frame_start = perf_counter()
+    frame_num = 0
+    x = 0.0
+    y = 0.0
+    keypoint = None  # for debugging inspection
+
+
+# This is where the Magic happens! The camera should pick up nothing but a white
+# dot from your reflective IR sticker. I use opencv blob detection to track its
+# (x, y) coordinates and send the changes to the receiving computer, which moves
+# the mouse.
 def blobby(request):
+    # MappedArray gives direct access to the captured camera frame
     with MappedArray(request, "main") as m:
-        global frame
-        global x
-        global y
-        global keypoints
-        global frame_start_ms
-        x_diff = 0
-        y_diff = 0
+        PhilNav.frame_num += 1
+        x_diff = 0.0
+        y_diff = 0.0
 
-        frame = frame + 1
-
+        # Track the IR sticker
         keypoints = detector.detect(m.array)
-        cv2.drawKeypoints(
-            m.array,
-            keypoints,
-            m.array,
-            (255, 0, 0),
-            cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
-        )
+        if args.preview:
+            # Draw red circles around the detected blobs, in-place on array
+            cv2.drawKeypoints(
+                m.array,  # source image
+                keypoints,
+                m.array,  # dest image
+                (255, 0, 0),  # RGB
+                # For each keypoint the circle around keypoint with keypoint
+                # size and orientation will be drawn.
+                cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
+            )
 
+        # Ideally should be exactly one keypoint
         if len(keypoints) > 0:
-            kp = keypoints[0]
+            # Compare the (x, y) coordinates from last frame
+            kp = PhilNav.keypoint = keypoints[0]
             x_new, y_new = kp.pt
-            x_diff = x_new - x
-            y_diff = y_new - y
-            x = x_new
-            y = y_new
+            x_diff = x_new - PhilNav.x
+            y_diff = y_new - PhilNav.y
+            PhilNav.x = x_new
+            PhilNav.y = y_new
+
+            # If the mouse has moved smoothly, but not "jumped"...
+            # Jumping can occur if multiple blobs are detected, such as other
+            # IR reflective surfaces in the camera's view, like glasses lenses.
             if (
                 (x_diff**2 > 0 or y_diff**2 > 0)
                 and x_diff**2 < 10
                 and y_diff**2 < 10
             ):
-                MESSAGE = struct.pack("dddddd", x_diff, y_diff, 0, 0, 0, frame_start_ms)
-                sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
+                # Send the (x_diff, y_diff) to the receiving computer.
+                # For performance stats, I'm also sending the frame time on
+                # Raspberry Pi; both absolute and relative. Absolute time doesn't
+                # work well because the Raspberry Pi clock and PC clock will not
+                # be synced to within 1 ms of each other.
+                #
+                # 48 bytes of 6 doubles in binary C format. Why? Because it's
+                # OpenTrack's protocol.
+                # struct.pack('dddddd', x, y, z, pitch, yaw, roll)
+                # PhilNav uses x, y as x_diff, y_diff and moves the mouse
+                # relative to its current position.
+                # https://github.com/opentrack/opentrack/issues/747
+                time_spent = perf_counter() - PhilNav.frame_start
+                MESSAGE = struct.pack(
+                    "dddddd", x_diff, y_diff, 0, 0, time_spent, PhilNav.frame_started_at)
+                sock.sendto(MESSAGE, (args.ip, args.port))
 
-        if frame % 1 == 0:
-            fps = frame / ((time.time() * 1000 - started_at_ms) / 1000)
-            ms = time.time() * 1000 - frame_start_ms
-            logging.warning(
-                f"Frame: {frame}, Diff: ({int(x_diff)}, {int(y_diff)}), FPS: {int(fps)}, local-MS: {int(ms)}"
+        # Log once per second
+        if PhilNav.frame_nume % args.fps == 0:
+            fps = PhilNav.frame_num / (time() - PhilNav.started_at)
+            ms = (perf_counter() - PhilNav.frame_start) * 1000
+            logging.info(
+                f"Frame: {PhilNav.frame_num}, Diff: ({int(x_diff)}, {int(y_diff)}), FPS: {
+                    int(fps)}, loc ms: {int(ms)}"
             )
 
-        frame_start_ms = time.time() * 1000
+        # I'm setting these at the end rather than the beginning, because I want
+        # to make sure to include the time capturing the image from the camera.
+        PhilNav.frame_started_at = time()
+        PhilNav.frame_start = perf_counter()
 
 
-picam2.pre_callback = blobby
-time.sleep(75)
+# Run the loop forever until Ctrl-C
+try:
+    picam2.pre_callback = blobby
+    sleep(10000000)  # run for one hundred days
+except KeyboardInterrupt:
+    pass
 
-# started_at = time.time()
-# try:
-#     while True:
-#         if is_pressed('p'):
-#             print(f"\rCaptured {filename} succesfully")
-#         if is_pressed('q'):
-#             print("\rClosing camera...")
-#             break
-#         frame = picam2.capture_array("main")
-#         keypoints = detector.detect(frame)
-#         mat_with_keypoints = cv2.drawKeypoints(frame, keypoints, numpy.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-#         cv2.imshow("img", mat_with_keypoints)
-#
-#         if time.time() - started_at > 5:
-#             break
-# finally:
 picam2.stop_preview()
 picam2.stop()
 picam2.close()
-
-# array = picam2.capture_array("main")
-# cv2.imshow("img", array); cv2.waitKey(0)
-#
-# src = cv2.imread("/home/philip/test.jpg", cv2.IMREAD_GRAYSCALE);
-#
-# params = cv2.SimpleBlobDetector_Params()
-# params.blobColor = 255
-# detector = cv2.SimpleBlobDetector_create(params)
-#
-# keypoints = detector.detect(src); keypoints
-# im_with_keypoints = cv2.drawKeypoints(src, keypoints, numpy.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-# cv2.imshow("img", im_with_keypoints); cv2.waitKey(0)
-
-cv2.destroyAllWindows()
