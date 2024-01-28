@@ -40,28 +40,31 @@ class POINT(ctypes.Structure):
 
 
 # initialize networking
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Read datagrams over UDP
-sock.settimeout(1)  #  Without a timeout, this script will "hang" if nothing is received
+# Read datagrams over UDP
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# Without a timeout, this script will "hang" if nothing is received
+sock.settimeout(1)
 sock.bind((args.host, args.port))  # Register our socket
 
 # How to get local IP address?
 # Doesn't work for me: socket.gethostbyname(socket.gethostname())
-# For now, just manually go to settings -> Wi-fi and look up your *local* IP address.
-# It will be something like 192.x.x.x or 10.x.x.x
-# This is not your public Internet address. This is your local area network address.
-# On Windows, make sure it's set to a private network to allow discovery.
-# You'd think public would allow discovery, but when you are *in public* - like at a coffee shop - you don't want strangers to access your PC.
+# For now, just manually go to settings -> Wi-fi and look up your *local* IP
+# address. It will be something like 192.x.x.x or 10.x.x.x This is not your
+# public Internet address. This is your local area network address. On Windows,
+# make sure it's set to a private network to allow discovery. You'd think public
+# would allow discovery, but when you are *in public* - like at a coffee shop -
+# you don't want strangers to access your PC.
 text_listening = (
-    f"Listening on {sock.getsockname()} for mouse data from Raspberry Pi server..."
+    f"Listening on {
+        sock.getsockname()} for mouse data from Raspberry Pi server..."
 )
 print(ctime() + " - " + text_listening)
 print("\nPress Ctrl-C to exit\n")
 
 
-# Stats for debugging & performance.
-# The goal is 60 frames per second, or 16.67ms per frame.
-# That leads to a very smooth mouse cursor. (SmartNav was 100 fps)
-# A standard non-gaming monitor is also 60Hz. (TV is 30 fps)
+# Stats for debugging & performance. The goal is 60 frames per second, or
+# 16.67ms per frame. That leads to a very smooth mouse cursor. (SmartNav was 100
+# fps) A standard non-gaming monitor is also 60Hz. (TV is 30 fps)
 @dataclass
 class PhilNavDebug:
     time_start = time()
@@ -78,9 +81,11 @@ class PhilNavDebug:
 # 3. Repeat forever until Ctrl-C
 while True:
     try:
-        # 48 bytes of 6 doubles in binary C format. Why? Because it's OpenTrack's protocol.
+        # 48 bytes of 6 doubles in binary C format. Why? Because it's
+        # OpenTrack's protocol.
         # x, y, z, pitch, yaw, roll = struct.unpack('dddddd', data)
-        # PhilNav uses x, y as x_diff, y_diff and moves the mouse relative to its current position.
+        # PhilNav uses x, y as x_diff, y_diff and moves the mouse relative to
+        # its current position.
         # https://github.com/opentrack/opentrack/issues/747
         data, addr = sock.recvfrom(48)
     except TimeoutError:
@@ -101,13 +106,17 @@ while True:
         ctypes.windll.user32.GetCursorPos(
             ctypes.byref(pt)
         )  # get current mouse position by reference (C++ thing)
-        # I'm moving the Y axis slightly faster because looking left and right is easier than nodding up and down.
-        # Also, monitors are wider than they are tall.
+        # I'm moving the Y axis slightly faster because looking left and right
+        # is easier than nodding up and down. Also, monitors are wider than they
+        # are tall.
         x_new = round(pt.x + x * args.speed)
         y_new = round(pt.y + y * args.speed * 1.33)
         ctypes.windll.user32.SetCursorPos(x_new, y_new)  # move mouse cursor
 
-        # I'm trying to measure the total time from capturing the frame on the camera to moving the mouse cursor on my PC. This isn't super accurate. It's sometimes negative (TIME TRAVEL!!!). The clock difference between the Raspberry Pi and my PC seems to be around 10-20ms?
+        # I'm trying to measure the total time from capturing the frame on the
+        # camera to moving the mouse cursor on my PC. This isn't super accurate.
+        # It's sometimes negative (TIME TRAVEL!!!). The clock difference between
+        # the Raspberry Pi and my PC seems to be around 10-20ms?
         time_diff_ms = int((time() - roll) * 1000)
 
         # it's 60 FPS, so only debug once per second
@@ -117,8 +126,10 @@ while True:
             # display legend every 5 seconds
             if PhilNavDebug.debug_num % 5 == 1:
                 logging.info(
-                    f" {ctime()} - Received: ({'x_diff':>8},{'y_diff':>8},{'n/a':>8},{'n/a':>8},{'loc ns':>8},{'net ms':>8}  )"
+                    f" {ctime()} - Received: ({'x_diff':>8},{'y_diff':>8},{
+                        'n/a':>8},{'n/a':>8},{'loc ns':>8},{'net ms':>8}  )"
                 )
             logging.info(
-                f" {ctime()} - Received: ({x:> 8.2f},{y:> 8.2f},{z:> 8.2f},{pitch:> 8.2f},{(time() - PhilNavDebug.msg_time_start)*1000:> 8.2f},{time_diff_ms:> 8}  )"
+                f" {ctime()} - Received: ({x:> 8.2f},{y:> 8.2f},{z:> 8.2f},{pitch:> 8.2f},{
+                    (time() - PhilNavDebug.msg_time_start)*1000:> 8.2f},{time_diff_ms:> 8}  )"
             )
