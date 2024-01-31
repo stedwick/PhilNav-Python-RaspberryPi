@@ -4,11 +4,65 @@ from time import time, ctime
 from dataclasses import dataclass
 from collections import deque  # for storing x, y time series
 import numpy as np  # for smoothing moving average
-import ctypes  # for windows mouse
+import ctypes  # for windows mouse POINT struct
 import socket  # udp networking
 import struct  # binary unpacking
+# import keyboard # keyboard shortcuts
+
+from pynput import keyboard
+
+
+
+
+# Collect events until released
+# with keyboard.Listener(
+#         on_press=on_press,
+#         on_release=on_release) as listener:
+#     listener.join()
+
+# ...or, in a non-blocking fashion:
+
+
+enabled = True
+
+def toggle():
+    global enabled
+    logging.info("\nToggled PhilNav on/off\n")
+    enabled = not enabled
+
+# https://pynput.readthedocs.io/en/latest/keyboard.html#global-hotkeys
+
+def for_canonical(f):
+    return lambda k: f(listener.canonical(k))
+
+hotkey = keyboard.HotKey(
+    [keyboard.Key.shift, keyboard.Key.f7.value],
+    toggle)
+
+listener = keyboard.Listener(
+        on_press=for_canonical(hotkey.press),
+        on_release=for_canonical(hotkey.release))
+
+listener.start()
+
+# keyboard.add_hotkey('space', toggle)
+# keyboard.add_hotkey('space', toggle)
+
+# keyboard.write('The quick brown fox jumps over the lazy dog.')
+# keyboard.add_hotkey('space', lambda: print('space was pressed!'))
+
+# returned from ctypes.windll.user32.GetCursorPos
+# simple point.x, point.y
+class POINT(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+
+import platform
 # Done: Windows
 # TODO: Mac, Linux
+match platform.system():
+    case "Darwin": # macOS
+        from mouse_mac import getCursorPos, setCursorPos
+
 
 print("\n\nCLIENT: Starting PhilNav\n")
 
@@ -43,10 +97,6 @@ if args.verbose:
     logging.info(" Logging verbosely\n")
 
 
-# returned from ctypes.windll.user32.GetCursorPos
-# simple point.x, point.y
-class POINT(ctypes.Structure):
-    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
 
 
 # initialize networking
@@ -65,8 +115,7 @@ sock.bind((args.host, args.port))  # Register our socket
 # would allow discovery, but when you are *in public* - like at a coffee shop -
 # you don't want strangers to access your PC.
 text_listening = (
-    f"Listening on {
-        sock.getsockname()} for mouse data from Raspberry Pi server..."
+    f"Listening on {sock.getsockname()} for mouse data from Raspberry Pi server..."
 )
 print(ctime() + " - " + text_listening)
 print("\nPress Ctrl-C to exit\n")
@@ -137,16 +186,15 @@ while True:
             y_smooth = y
 
         # The Magic Happens Now! eg. move mouse cursor =P
-        pt = POINT()
-        ctypes.windll.user32.GetCursorPos(
-            ctypes.byref(pt)
-        )  # get current mouse position by reference (C++ thing)
+        x_cur, y_cur = getCursorPos()
+        # get current mouse position by reference (C++ thing)
         # I'm moving the Y axis slightly faster because looking left and right
         # is easier than nodding up and down. Also, monitors are wider than they
         # are tall.
-        x_new = round(pt.x + x_smooth * args.speed)
-        y_new = round(pt.y + y_smooth * args.speed * 1.25)
-        ctypes.windll.user32.SetCursorPos(x_new, y_new)  # move mouse cursor
+        x_new = round(x_cur + x_smooth * args.speed)
+        y_new = round(y_cur + y_smooth * args.speed * 1.25)
+        if enabled:
+            setCursorPos(x_new, y_new)  # move mouse cursor
 
         # I'm trying to measure the total time from capturing the frame on the
         # camera to moving the mouse cursor on my PC. This isn't super accurate.
@@ -161,10 +209,8 @@ while True:
             # display legend every 5 seconds
             if PhilNav.debug_num % 5 == 1:
                 logging.info(
-                    f" {ctime()} - Received: ({'x_diff':>8},{'y_diff':>8},{
-                        'n/a':>8},{'n/a':>8},{'loc ns':>8},{'net ms':>8}  )"
+                    f" {ctime()} - Received: ({'x_diff':>8},{'y_diff':>8},{'n/a':>8},{'n/a':>8},{'loc ns':>8},{'net ms':>8}  )"
                 )
             logging.info(
-                f" {ctime()} - Received: ({x:> 8.2f},{y:> 8.2f},{z:> 8.2f},{pitch:> 8.2f},{
-                    (time() - PhilNav.msg_time_start)*1000:> 8.2f},{time_diff_ms:> 8}  )"
+                f" {ctime()} - Received: ({x:> 8.2f},{y:> 8.2f},{z:> 8.2f},{pitch:> 8.2f},{(time() - PhilNav.msg_time_start)*1000:> 8.2f},{time_diff_ms:> 8}  )"
             )
