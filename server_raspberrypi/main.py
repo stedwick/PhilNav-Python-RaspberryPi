@@ -107,9 +107,9 @@ params = cv2.SimpleBlobDetector_Params()
 params.filterByColor = True
 params.filterByArea = True
 params.blobColor = args.blob_color
-params.minArea = 25
-params.minThreshold = 150
-params.minRepeatability = 3
+params.minArea = 15
+params.minThreshold = 200
+params.minRepeatability = 1
 params.filterByCircularity = False
 params.filterByConvexity = False
 params.filterByInertia = False
@@ -171,8 +171,8 @@ def blobby(request):
             # IR reflective surfaces in the camera's view, like glasses lenses.
             if (
                 (x_diff**2 > 0 or y_diff**2 > 0)
-                and x_diff**2 < 10
-                and y_diff**2 < 10
+                and x_diff**2 < 50
+                and y_diff**2 < 50
             ):
                 # Send the (x_diff, y_diff) to the receiving computer.
                 # For performance stats, I'm also sending the frame time on
@@ -208,7 +208,7 @@ def blobby(request):
 # Run the loop forever until Ctrl-C
 try:
     picam2.pre_callback = blobby
-    sleep(10000000)  # run for one hundred days
+    sleep(60 * 60 * 8)  # run for 8 hours, or 1 workday
 except KeyboardInterrupt:
     pass
 
