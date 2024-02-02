@@ -1,16 +1,18 @@
 import argparse
 import logging
-from time import time, perf_counter, sleep
-from dataclasses import dataclass
+from time import time, ctime, perf_counter, sleep
 import socket  # udp networking
 import struct  # binary packing
 from picamera2 import Picamera2, Preview, MappedArray  # Raspberry Pi camera
 from libcamera import Transform  # taking selfies, so used to mirror image
 import cv2  # OpenCV, for blob detection
 
-print("\n\nSERVER: Starting PhilNav\n")
 
-preview_text = "Adjust the camera controls listed with --help such that you get a mostly black picture with bright white reflective IR sticker in the center. The controls default to what worked for me via trial and error."
+text = {}
+text.intro = "\n\nSERVER: Starting PhilNav\n\nWelcome to PhilNav, I'm Phil!\n\nIf running PhilNav for the first time, use --help and --preview to set up your camera.\n"
+text.preview = "\nAdjust the camera controls (listed with --help) until you get a mostly black picture with bright white reflective IR sticker in the center. The controls default to what worked for Phil via trial and error.\n"
+print(text.intro)
+
 
 # parse command line arguments
 parser = argparse.ArgumentParser()
@@ -18,16 +20,16 @@ parser.add_argument(
     "--ip",
     required=True,
     type=str,
-    help="remote ip address of PC that will receive mouse movements",
+    help="remote ip address of PC that will receive mouse movements (find your PC's home network ip, not internet ip; usually 192.x.x.x, 172.x.x.x, or 10.x.x.x)",
 )
 parser.add_argument(
     "-p", "--port", type=int, default=4245, help="send to remote port, default 4245"
 )
 parser.add_argument(
-    "-v", "--verbose", action="store_true", help="provide verbose logging"
+    "-v", "--verbose", action="store_true", help="enable verbose logging"
 )
 parser.add_argument(
-    "--preview", action="store_true", help="Use when logged into Raspberry Pi Gui; will show camera preview. " + preview_text
+    "--preview", action="store_true", help="Use when logged into Raspberry Pi Gui; will show camera preview."
 )
 parser.add_argument(
     "--fps", type=float, default=75.0, help="camera FrameRate, default 75"
@@ -57,33 +59,37 @@ parser.add_argument(
     "--no-hflip", action="store_true", help="images are selfies and flipped horizontally by default"
 )
 parser.add_argument(
-    "--blob-color", type=int, default=255, help="OpenCV blob detection color, default 255 (white; I believe it's grayscale 0-255)"
+    "--blob-size", type=int, default=15, help="OpenCV blob minimum size, default 15"
+)
+parser.add_argument(
+    "--blob-color", type=int, default=255, help="OpenCV blob detection color, default 255 (white = 255, or black = 0)"
+)
+parser.add_argument(
+    "--timeout", type=int, default=(60*60*8), help="exit after n seconds, default 60*60*8 = 8 hours, one workday"
 )
 args = parser.parse_args()
 
 if args.verbose:
     logging.getLogger().setLevel(logging.DEBUG)
-    logging.info(" Logging verbosely\n")
+    logging.info("\n>>>>> Logging verbosely <<<<<\n")
 
 if args.preview:
-    print(preview_text + "\n")
-else:
-    print("If running PhilNav for the first time, use --help and --preview to set up your camera.\n")
+    print(text.preview)
 
-# The camera can be configured and controlled with different settings in each.
-# Not entirely sure the difference.
-config_main = {
-    "size": (args.width, args.height)
-}
-picam2 = Picamera2()
-# Not entirely sure how configurations work, preview/main etc.
 hflip_num = 1
 if args.no_hflip:
     hflip_num = 0
-config = picam2.create_preview_configuration(main=config_main, transform=Transform(hflip=hflip_num))
+
+
+picam2 = Picamera2()
+# The camera can be "configured" and "controlled" with different settings in each.
+config_main = {"size": (args.width, args.height)}
+# Not entirely sure how configurations work, preview/main etc.
+config = picam2.create_preview_configuration(
+    main=config_main, transform=Transform(hflip=hflip_num))
 picam2.configure(config)
 
-controls_main = {
+controls = {
     "AnalogueGain": args.gain,
     "Brightness": args.brightness,
     "Contrast": args.contrast,
@@ -91,57 +97,72 @@ controls_main = {
     "Saturation": args.saturation,
     "FrameRate": args.fps
 }
-picam2.set_controls(controls_main)
+picam2.set_controls(controls)
 
 if args.preview:
     picam2.start_preview(Preview.QT)
 else:
     picam2.start_preview(Preview.NULL)
 
-# Not entirely sure the difference between start_preview and start.
+# Not sure if we need both start_preview and start.
 picam2.start()
 sleep(1)  # let camera warm up
 
+
+# show intro again
+print(text.intro)
+if args.preview:
+    print(text.preview)
+
+
 # OpenCV blob detection config
 params = cv2.SimpleBlobDetector_Params()
-params.filterByColor = True
 params.filterByArea = True
+params.minArea = args.blob_size
+params.filterByColor = True
 params.blobColor = args.blob_color
-params.minArea = 15
 params.minThreshold = 200
-params.minRepeatability = 1
+params.thresholdStep = 50
+params.minRepeatability = 2
+params.minDistBetweenBlobs = 100
 params.filterByCircularity = False
 params.filterByConvexity = False
 params.filterByInertia = False
-params.minDistBetweenBlobs = 100
 detector = cv2.SimpleBlobDetector_create(params)
+
 
 # Set up UDP socket to receiving computer
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # datagrams over UDP
+sock_addr = (args.ip, args.port)
 
+# (pn = PhilNav) Global for storing data from loop-to-loop, also stats for debugging
+pn = {}
+pn.started_at = time()
+pn.frame_started_at = time()
+pn.frame_perf = perf_counter()
+pn.frame_between = perf_counter()
+pn.frame_num = 0
+pn.x = 0.0
+pn.y = 0.0
+pn.debug_num = 0
+pn.keypoint = None  # for debugging inspection
 
-# Globals for storing data from loop-to-loop, also stats for debugging
-@dataclass
-class PhilNav:
-    started_at = time()
-    frame_started_at = time()
-    frame_start = perf_counter()
-    frame_num = 0
-    x = 0.0
-    y = 0.0
-    keypoint = None  # for debugging inspection
 
 # This is where the Magic happens! The camera should pick up nothing but a white
 # dot from your reflective IR sticker. I use opencv blob detection to track its
 # (x, y) coordinates and send the changes to the receiving computer, which moves
 # the mouse.
 def blobby(request):
+    global pn, detector, args, sock_addr
+    pn.frame_perf = perf_counter()
+    pn.frame_started_at = time()
+    pn.frame_num += 1
+    ms_frame_between = (perf_counter() - pn.frame_between) * 1000
+    x_diff = 0.0
+    y_diff = 0.0
+
     # MappedArray gives direct access to the captured camera frame
     with MappedArray(request, "main") as m:
-        PhilNav.frame_num += 1
-        x_diff = 0.0
-        y_diff = 0.0
-
         # Track the IR sticker
         keypoints = detector.detect(m.array)
         if args.preview:
@@ -156,17 +177,17 @@ def blobby(request):
                 cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
             )
 
-        # Ideally should be exactly one keypoint
+        # Ideally should be exactly one keypoint, or use biggest
         if len(keypoints) > 0:
+            kp = pn.keypoint = max(keypoints, key="size")
             # Compare the (x, y) coordinates from last frame
-            kp = PhilNav.keypoint = keypoints[0]
             x_new, y_new = kp.pt
-            x_diff = x_new - PhilNav.x
-            y_diff = y_new - PhilNav.y
-            PhilNav.x = x_new
-            PhilNav.y = y_new
+            x_diff = x_new - pn.x
+            y_diff = y_new - pn.y
+            pn.x = x_new
+            pn.y = y_new
 
-            # If the mouse has moved smoothly, but not "jumped"...
+            # If the IR sticker has moved smoothly, but not "jumped"...
             # Jumping can occur if multiple blobs are detected, such as other
             # IR reflective surfaces in the camera's view, like glasses lenses.
             if (
@@ -175,10 +196,8 @@ def blobby(request):
                 and y_diff**2 < 50
             ):
                 # Send the (x_diff, y_diff) to the receiving computer.
-                # For performance stats, I'm also sending the frame time on
-                # Raspberry Pi; both absolute and relative. Absolute time doesn't
-                # work well because the Raspberry Pi clock and PC clock will not
-                # be synced to within 1 ms of each other.
+                # For performance stats, I'm also sending the time spent on
+                # Raspberry Pi.
                 #
                 # 48 bytes of 6 doubles in binary C format. Why? Because it's
                 # OpenTrack's protocol.
@@ -186,32 +205,39 @@ def blobby(request):
                 # PhilNav uses x, y as x_diff, y_diff and moves the mouse
                 # relative to its current position.
                 # https://github.com/opentrack/opentrack/issues/747
-                time_spent = perf_counter() - PhilNav.frame_start
-                MESSAGE = struct.pack(
-                    "dddddd", x_diff, y_diff, 0, 0, time_spent, PhilNav.frame_started_at)
-                sock.sendto(MESSAGE, (args.ip, args.port))
+                ms_time_spent = (perf_counter() - pn.frame_perf)*1000
+                msg = struct.pack("dddddd",
+                                  x_diff, y_diff,
+                                  0, 0,
+                                  pn.frame_started_at, ms_time_spent)
+                sock.sendto(msg, sock_addr)
 
         # Log once per second
-        if PhilNav.frame_num % args.fps == 0:
-            fps = PhilNav.frame_num / (time() - PhilNav.started_at)
-            ms = (perf_counter() - PhilNav.frame_start) * 1000
+        if args.verbose and (pn.frame_num % int(args.fps) == 0):
+            pn.debug_num += 1
+            c_time = ctime()
+            fps_measured = pn.frame_num / (time() - pn.started_at)
+            ms_measured = (perf_counter() - pn.frame_perf) * 1000
+            # display legend every 5 seconds
+            if pn.debug_num % 5 == 1:
+                logging.info(
+                    f"{c_time} - {"Frame":>8}, ({"x_diff":>8}, {"y_diff":>8}), {"FPS":>8}, {"cv ms":>8}, {"btw ms":>8}")
             logging.info(
-                f"Frame: {PhilNav.frame_num}, Diff: ({int(x_diff)}, {int(y_diff)}), FPS: {int(fps)}, loc ms: {int(ms)}"
-            )
+                f"{c_time} - {pn.frame_num:>8}, ({x_diff:> 8.2f}, {y_diff:> 8.2f}), {int(fps_measured):>8}, {int(ms_measured):>8}, {int(ms_frame_between):>8}")
 
-        # I'm setting these at the end rather than the beginning, because I want
-        # to make sure to include the time capturing the image from the camera.
-        PhilNav.frame_started_at = time()
-        PhilNav.frame_start = perf_counter()
+        # Time between capturing frames from the camera.
+        pn.frame_between = perf_counter()
 
 
-# Run the loop forever until Ctrl-C
+# Run the loop until timeout or Ctrl-C
 try:
     picam2.pre_callback = blobby
-    sleep(60 * 60 * 8)  # run for 8 hours, or 1 workday
+    sleep(args.timeout)  # turn off at some point
 except KeyboardInterrupt:
     pass
 
+
+# cleanup
 picam2.stop_preview()
 picam2.stop()
 picam2.close()
