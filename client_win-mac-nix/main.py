@@ -1,6 +1,7 @@
 import argparse
 import logging
 from time import time, ctime
+from dataclasses import dataclass
 from collections import deque  # for storing x, y time series
 import socket  # udp networking
 import struct  # binary unpacking
@@ -95,21 +96,22 @@ print("\nPress Ctrl-C to exit, press Shift-F7 to pause/resume\n")
 # Stats for debugging & performance. The goal is 60 frames per second, or
 # 16.67ms per frame. That leads to a very smooth mouse cursor. (SmartNav was 100
 # fps) A standard non-gaming monitor is also 60Hz. (TV is 30 fps)
-phil = {}
-phil.time_start = time()
-phil.time_debug = time()
-phil.debug_num = 0
 
 # mouse (x_diff, y_diff) smoothing running averages
 smooth_long = args.smooth*3+1
-phil.x_q = deque([], args.smooth)
-phil.x_q_smooth = 0
-phil.x_q_long = deque([], smooth_long)
-phil.x_q_long_smooth = 0
-phil.y_q = deque([], args.smooth)
-phil.y_q_smooth = 0
-phil.y_q_long = deque([], smooth_long)
-phil.y_q_long_smooth = 0
+@dataclass
+class phil:
+    time_start = time()
+    time_debug = time()
+    debug_num = 0
+    x_q = deque([], args.smooth)
+    x_q_smooth = 0
+    x_q_long = deque([], smooth_long)
+    x_q_long_smooth = 0
+    y_q = deque([], args.smooth)
+    y_q_smooth = 0
+    y_q_long = deque([], smooth_long)
+    y_q_long_smooth = 0
 
 
 # simple moving average to reduce mouse jitter
