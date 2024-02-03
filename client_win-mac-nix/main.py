@@ -50,7 +50,7 @@ if args.smooth < 1:
 
 if args.verbose:
     logging.getLogger().setLevel(logging.DEBUG)
-    logging.info("\nLogging verbosely\n")
+    logging.info("Logging verbosely\n")
 
 
 # Hotkey to pause/resume moving the mouse
@@ -59,7 +59,7 @@ enabled = True
 def toggle():
     global enabled
     enabled = not enabled
-    logging.info("\nToggled PhilNav on/off\n")
+    logging.info("Toggled PhilNav on/off\n")
 
 # Shift-F7 hard-coded for now
 hotkey_toggle = keyboard.HotKey(
@@ -188,8 +188,8 @@ while True:
             # display legend every 5 seconds
             if phil.debug_num % 5 == 1:
                 logging.info(
-                    f"{now_str} - Received: ({'x_diff':>8},{'y_diff':>8}),{'n/a':>8},{'n/a':>8},{'time ms':>8},{'time cv':>8}"
+                    f"{now_str} - Received: ({'x_diff':>8},{'y_diff':>8})  ,{'n/a':>8},{'n/a':>8},{'time ms':>8},{'time cv':>8}"
                 )
             logging.info(
-                f"{now_str} - Received: ({x_diff:> 8.2f},{y_diff:> 8.2f}),{a:> 8.2f},{b:> 8.2f},{ms_time_diff:> 8},{ms_opencv:>8}"
+                f"{now_str} - Received: ({x_diff:> 8.2f},{y_diff:> 8.2f})  ,{a:> 8.2f},{b:> 8.2f},{ms_time_diff:> 8.2f},{ms_opencv:>8.2f}"
             )
