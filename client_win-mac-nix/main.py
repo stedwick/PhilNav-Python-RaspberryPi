@@ -7,7 +7,7 @@ import socket  # udp networking
 import struct  # binary unpacking
 from pynput import keyboard # for hotkeys
 
-print("\n\nCLIENT: Starting PhilNav\n")
+print("\n\nCLIENT: Starting PhilNav\n\nWelcome to PhilNav, I'm Phil!\n")
 
 import platform
 match platform.system():
@@ -191,5 +191,5 @@ while True:
                     f"{now_str} - Received: ({'x_diff':>8},{'y_diff':>8})  ,{'n/a':>8},{'n/a':>8},{'time ms':>8},{'time cv':>8}"
                 )
             logging.info(
-                f"{now_str} - Received: ({x_diff:> 8.2f},{y_diff:> 8.2f})  ,{a:> 8.2f},{b:> 8.2f},{ms_time_diff:> 8.2f},{ms_opencv:>8.2f}"
+                f"{now_str} - Received: ({x_diff:> 8.2f},{y_diff:> 8.2f})  ,{a:> 8.2f},{b:> 8.2f},{ms_time_diff:>8},{ms_opencv:>8.2f}"
             )
