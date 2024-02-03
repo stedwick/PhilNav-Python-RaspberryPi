@@ -46,6 +46,9 @@ parser.add_argument(
     "-p", "--port", type=int, default=4245, help="bind to port, default 4245"
 )
 parser.add_argument(
+    "-t", "--timeout", type=int, default=0, help="turn off after N seconds (eg. 60*60*8 is 8 hours or one workday), default off"
+)
+parser.add_argument(
     "-w", "--keepawake", type=int, default=0, help="Keep PC awake by randomly moving the mouse a few pixels every N seconds, default off"
 )
 
@@ -153,9 +156,16 @@ while True:
             logging.info(f"{ctime()} - {text_listening}")
         continue
     else:
+        # timers
         time_iter = time()
+        time_btwn_moves = time_iter - phil.time_last_moved
+        time_since_start = time_iter - phil.time_start
+
+        # time-based functionality
+        if args.timeout > 0 and time_since_start > args.timeout:
+            break
         if not enabled:
-            if args.keepawake > 0 and args.keepawake < (time_iter - phil.time_last_moved):
+            if args.keepawake > 0 and time_btwn_moves > args.keepawake:
                 mouse_move_random()
                 phil.time_last_moved = time_iter
             continue
