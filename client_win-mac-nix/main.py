@@ -1,8 +1,7 @@
-import argparse
-import logging
+import argparse, logging
 from time import time, ctime
 from dataclasses import dataclass
-import math
+import math, random
 from collections import deque  # for storing x, y time series
 import socket  # udp networking
 import struct  # binary unpacking
@@ -45,6 +44,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "-p", "--port", type=int, default=4245, help="bind to port, default 4245"
+)
+parser.add_argument(
+    "-w", "--keepawake", type=int, default=0, help="Keep PC awake by randomly moving the mouse a few pixels every N seconds, default off"
 )
 
 args = parser.parse_args()
@@ -106,6 +108,7 @@ smooth_long = args.smooth*3+1
 @dataclass
 class phil:
     time_start = time()
+    time_last_moved = time()
     time_debug = time()
     debug_num = 0
     x_q = deque([], args.smooth)
@@ -122,6 +125,14 @@ class phil:
 def smooth(q):
     avg = sum(q) / len(q)
     return avg
+
+
+# for keep-awake
+def mouse_move_random():
+    x_cur, y_cur = getCursorPos()
+    x_new = round(x_cur + random.randint(-5, 5))
+    y_new = round(y_cur + random.randint(-5, 5))
+    setCursorPos(x_new, y_new)  # move mouse cursor
 
 
 # Main event loop:
@@ -142,7 +153,11 @@ while True:
             logging.info(f"{ctime()} - {text_listening}")
         continue
     else:
+        time_iter = time()
         if not enabled:
+            if args.keepawake > 0 and args.keepawake < (time_iter - phil.time_last_moved):
+                mouse_move_random()
+                phil.time_last_moved = time_iter
             continue
 
         # Using OpenTrack protocol, but PhilNav uses:
@@ -185,6 +200,7 @@ while True:
         x_new = round(x_cur + x_smooth * args.speed)
         y_new = round(y_cur + y_smooth * args.speed * 1.25)
         setCursorPos(x_new, y_new)  # move mouse cursor
+        phil.time_last_moved = time()
 
         # I'm trying to measure the total time from capturing the frame on the
         # camera to moving the mouse cursor on my PC. This isn't super accurate.
