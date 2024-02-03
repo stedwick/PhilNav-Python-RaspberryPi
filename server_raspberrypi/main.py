@@ -135,17 +135,18 @@ detector = cv2.SimpleBlobDetector_create(params)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # datagrams over UDP
 sock_addr = (args.ip, args.port)
 
-# (pn = PhilNav) Global for storing data from loop-to-loop, also stats for debugging
-pn = {}
-pn.started_at = time()
-pn.frame_started_at = time()
-pn.frame_perf = perf_counter()
-pn.frame_between = perf_counter()
-pn.frame_num = 0
-pn.x = 0.0
-pn.y = 0.0
-pn.debug_num = 0
-pn.keypoint = None  # for debugging inspection
+
+# Global for storing data from loop-to-loop, also stats for debugging
+phil = {}
+phil.started_at = time()
+phil.frame_started_at = time()
+phil.frame_perf = perf_counter()
+phil.frame_between = perf_counter()
+phil.frame_num = 0
+phil.x = 0.0
+phil.y = 0.0
+phil.debug_num = 0
+phil.keypoint = None  # for debugging inspection
 
 
 # This is where the Magic happens! The camera should pick up nothing but a white
@@ -153,11 +154,10 @@ pn.keypoint = None  # for debugging inspection
 # (x, y) coordinates and send the changes to the receiving computer, which moves
 # the mouse.
 def blobby(request):
-    global pn, detector, args, sock_addr
-    pn.frame_perf = perf_counter()
-    pn.frame_started_at = time()
-    pn.frame_num += 1
-    ms_frame_between = (perf_counter() - pn.frame_between) * 1000
+    phil.frame_perf = perf_counter()
+    phil.frame_started_at = time()
+    phil.frame_num += 1
+    ms_frame_between = (perf_counter() - phil.frame_between) * 1000
     x_diff = 0.0
     y_diff = 0.0
 
@@ -179,13 +179,13 @@ def blobby(request):
 
         # Ideally should be exactly one keypoint, or use biggest
         if len(keypoints) > 0:
-            kp = pn.keypoint = max(keypoints, key="size")
+            kp = phil.keypoint = max(keypoints, key="size")
             # Compare the (x, y) coordinates from last frame
             x_new, y_new = kp.pt
-            x_diff = x_new - pn.x
-            y_diff = y_new - pn.y
-            pn.x = x_new
-            pn.y = y_new
+            x_diff = x_new - phil.x
+            y_diff = y_new - phil.y
+            phil.x = x_new
+            phil.y = y_new
 
             # If the IR sticker has moved smoothly, but not "jumped"...
             # Jumping can occur if multiple blobs are detected, such as other
@@ -205,28 +205,28 @@ def blobby(request):
                 # PhilNav uses x, y as x_diff, y_diff and moves the mouse
                 # relative to its current position.
                 # https://github.com/opentrack/opentrack/issues/747
-                ms_time_spent = (perf_counter() - pn.frame_perf)*1000
+                ms_time_spent = (perf_counter() - phil.frame_perf)*1000
                 msg = struct.pack("dddddd",
                                   x_diff, y_diff,
                                   0, 0,
-                                  pn.frame_started_at, ms_time_spent)
+                                  phil.frame_started_at, ms_time_spent)
                 sock.sendto(msg, sock_addr)
 
         # Log once per second
-        if args.verbose and (pn.frame_num % int(args.fps) == 0):
-            pn.debug_num += 1
+        if args.verbose and (phil.frame_num % int(args.fps) == 0):
+            phil.debug_num += 1
             c_time = ctime()
-            fps_measured = pn.frame_num / (time() - pn.started_at)
-            ms_measured = (perf_counter() - pn.frame_perf) * 1000
+            fps_measured = phil.frame_num / (time() - phil.started_at)
+            ms_measured = (perf_counter() - phil.frame_perf) * 1000
             # display legend every 5 seconds
-            if pn.debug_num % 5 == 1:
+            if phil.debug_num % 5 == 1:
                 logging.info(
                     f"{c_time} - {"Frame":>8}, ({"x_diff":>8}, {"y_diff":>8}), {"FPS":>8}, {"cv ms":>8}, {"btw ms":>8}")
             logging.info(
-                f"{c_time} - {pn.frame_num:>8}, ({x_diff:> 8.2f}, {y_diff:> 8.2f}), {int(fps_measured):>8}, {int(ms_measured):>8}, {int(ms_frame_between):>8}")
+                f"{c_time} - {phil.frame_num:>8}, ({x_diff:> 8.2f}, {y_diff:> 8.2f}), {int(fps_measured):>8}, {int(ms_measured):>8}, {int(ms_frame_between):>8}")
 
         # Time between capturing frames from the camera.
-        pn.frame_between = perf_counter()
+        phil.frame_between = perf_counter()
 
 
 # Run the loop until timeout or Ctrl-C
