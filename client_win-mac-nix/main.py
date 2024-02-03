@@ -33,7 +33,7 @@ parser.add_argument(
     "-S", "--smooth", type=int, default=3, help="averages mouse movements to smooth out jittering, default 3"
 )
 parser.add_argument(
-    "-d", "--deadzone", type=float, default=0.0, help="Mouse must move by at least this much, otherwise it stays still. Use this if you are having difficulty with small mouse movements, or with keeping the cursor still. Recommend 0.0, 0.05 or 0.1, default 0.0"
+    "-d", "--deadzone", type=float, default=0.03, help="Mouse must move by at least this much, otherwise it stays still. Use this if you are having difficulty with small mouse movements, or with keeping the cursor still. Recommend 0.0 - 0.15, default 0.03"
 )
 parser.add_argument(
     "-H",
@@ -143,6 +143,20 @@ def mouse_move_random():
 # 2. Update mouse cursor position
 # 3. Repeat forever until Ctrl-C
 while True:
+    # timers
+    time_iter = time()
+    time_btwn_moves = time_iter - phil.time_last_moved
+    time_since_start = time_iter - phil.time_start
+
+    # time-based functionality
+    if args.timeout > 0 and time_since_start > args.timeout:
+        break
+    if not enabled:
+        if args.keepawake > 0 and time_btwn_moves > args.keepawake:
+            mouse_move_random()
+            phil.time_last_moved = time_iter
+
+    # get mouse data from Raspberry Pi        
     try:
         # 48 bytes of 6 doubles in binary C format. Why? Because it's
         # OpenTrack's protocol.
@@ -156,18 +170,7 @@ while True:
             logging.info(f"{ctime()} - {text_listening}")
         continue
     else:
-        # timers
-        time_iter = time()
-        time_btwn_moves = time_iter - phil.time_last_moved
-        time_since_start = time_iter - phil.time_start
-
-        # time-based functionality
-        if args.timeout > 0 and time_since_start > args.timeout:
-            break
         if not enabled:
-            if args.keepawake > 0 and time_btwn_moves > args.keepawake:
-                mouse_move_random()
-                phil.time_last_moved = time_iter
             continue
 
         # Using OpenTrack protocol, but PhilNav uses:
