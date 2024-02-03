@@ -1,6 +1,7 @@
 import argparse
 import logging
 from time import time, ctime, perf_counter, sleep
+from dataclasses import dataclass
 import socket  # udp networking
 import struct  # binary packing
 from picamera2 import Picamera2, Preview, MappedArray  # Raspberry Pi camera
@@ -8,9 +9,11 @@ from libcamera import Transform  # taking selfies, so used to mirror image
 import cv2  # OpenCV, for blob detection
 
 
-text = {}
-text.intro = "\n\nSERVER: Starting PhilNav\n\nWelcome to PhilNav, I'm Phil!\n\nIf running PhilNav for the first time, use --help and --preview to set up your camera.\n"
-text.preview = "\nAdjust the camera controls (listed with --help) until you get a mostly black picture with bright white reflective IR sticker in the center. The controls default to what worked for Phil via trial and error.\n"
+@dataclass
+class text:
+    intro = "\n\nSERVER: Starting PhilNav\n\nWelcome to PhilNav, I'm Phil!\n\nIf running PhilNav for the first time, use --help and --preview to set up your camera.\n"
+    preview = "Adjust the camera controls (listed with --help) until you get a mostly black picture with bright white reflective IR sticker in the center. The controls default to what worked for Phil via trial and error.\n"
+
 print(text.intro)
 
 
@@ -70,8 +73,8 @@ parser.add_argument(
 args = parser.parse_args()
 
 if args.verbose:
-    logging.getLogger().setLevel(logging.DEBUG)
-    logging.info("\n>>>>> Logging verbosely <<<<<\n")
+    logging.getLogger().setLevel(logging.INFO)
+    logging.info("Logging verbosely\n")
 
 if args.preview:
     print(text.preview)
@@ -122,6 +125,7 @@ params.minArea = args.blob_size
 params.filterByColor = True
 params.blobColor = args.blob_color
 params.minThreshold = 200
+params.maxThreshold = 255
 params.thresholdStep = 50
 params.minRepeatability = 2
 params.minDistBetweenBlobs = 100
@@ -137,16 +141,17 @@ sock_addr = (args.ip, args.port)
 
 
 # Global for storing data from loop-to-loop, also stats for debugging
-phil = {}
-phil.started_at = time()
-phil.frame_started_at = time()
-phil.frame_perf = perf_counter()
-phil.frame_between = perf_counter()
-phil.frame_num = 0
-phil.x = 0.0
-phil.y = 0.0
-phil.debug_num = 0
-phil.keypoint = None  # for debugging inspection
+@dataclass
+class phil:
+    started_at = time()
+    frame_started_at = time()
+    frame_perf = perf_counter()
+    frame_between = perf_counter()
+    frame_num = 0
+    x = 0.0
+    y = 0.0
+    debug_num = 0
+    keypoint = None  # for debugging inspection
 
 
 # This is where the Magic happens! The camera should pick up nothing but a white
@@ -179,7 +184,7 @@ def blobby(request):
 
         # Ideally should be exactly one keypoint, or use biggest
         if len(keypoints) > 0:
-            kp = phil.keypoint = max(keypoints, key="size")
+            kp = max(keypoints, key=lambda x: x.size)
             # Compare the (x, y) coordinates from last frame
             x_new, y_new = kp.pt
             x_diff = x_new - phil.x
@@ -208,7 +213,7 @@ def blobby(request):
                 ms_time_spent = (perf_counter() - phil.frame_perf)*1000
                 msg = struct.pack("dddddd",
                                   x_diff, y_diff,
-                                  0, 0,
+                                  0.0, 0.0,
                                   phil.frame_started_at, ms_time_spent)
                 sock.sendto(msg, sock_addr)
 
@@ -221,9 +226,9 @@ def blobby(request):
             # display legend every 5 seconds
             if phil.debug_num % 5 == 1:
                 logging.info(
-                    f"{c_time} - {"Frame":>8}, ({"x_diff":>8}, {"y_diff":>8}), {"FPS":>8}, {"cv ms":>8}, {"btw ms":>8}")
+                    f"{c_time} - {'Frame':>8}, ({'x_diff':>8}, {'y_diff':>8})  , {'FPS':>8}, {'cv ms':>8}, {'btw ms':>8}")
             logging.info(
-                f"{c_time} - {phil.frame_num:>8}, ({x_diff:> 8.2f}, {y_diff:> 8.2f}), {int(fps_measured):>8}, {int(ms_measured):>8}, {int(ms_frame_between):>8}")
+                f"{c_time} - {phil.frame_num:>8}, ({x_diff:> 8.2f}, {y_diff:> 8.2f})  , {int(fps_measured):>8}, {int(ms_measured):>8}, {int(ms_frame_between):>8}")
 
         # Time between capturing frames from the camera.
         phil.frame_between = perf_counter()
