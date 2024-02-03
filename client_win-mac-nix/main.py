@@ -2,12 +2,13 @@ import argparse
 import logging
 from time import time, ctime
 from dataclasses import dataclass
+import math
 from collections import deque  # for storing x, y time series
 import socket  # udp networking
 import struct  # binary unpacking
 from pynput import keyboard # for hotkeys
 
-print("\n\nCLIENT: Starting PhilNav\n\nWelcome to PhilNav, I'm Phil!\n")
+print("\n\nCLIENT: Starting PhilNav\n\nWelcome to PhilNav, I'm Phil!\n\nUse --help for more info.\n")
 
 import platform
 match platform.system():
@@ -31,6 +32,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "-S", "--smooth", type=int, default=3, help="averages mouse movements to smooth out jittering, default 3"
+)
+parser.add_argument(
+    "-d", "--deadzone", type=float, default=0.0, help="Mouse must move by at least this much, otherwise it stays still. Use this if you are having difficulty with small mouse movements, or with keeping the cursor still. Recommend 0.0, 0.05 or 0.1, default 0.0"
 )
 parser.add_argument(
     "-H",
@@ -147,22 +151,31 @@ while True:
 
         # store recent mouse movements
         phil.x_q.append(x_diff)
+        phil.x_q_smooth = smooth(phil.x_q)
         phil.y_q.append(y_diff)
+        phil.y_q_smooth = smooth(phil.y_q)
         phil.x_q_long.append(x_diff)
+        phil.x_q_long_smooth = smooth(phil.x_q_long)
         phil.y_q_long.append(y_diff)
+        phil.y_q_long_smooth = smooth(phil.y_q_long)
 
         # Perform more smoothing the *slower* the mouse is moving.
         # A slow-moving cursor means the user is trying to precisely
         # point at something.
         if x_diff**2 + y_diff**2 < 0.2: # more smoothing
-            x_smooth = smooth(phil.x_q_long)
-            y_smooth = smooth(phil.y_q_long)
+            x_smooth = phil.x_q_long_smooth
+            y_smooth = phil.y_q_long_smooth
         elif x_diff**2 + y_diff**2 < 0.5: # less smoothing
-            x_smooth = smooth(phil.x_q)
-            y_smooth = smooth(phil.y_q)
+            x_smooth = phil.x_q_smooth
+            y_smooth = phil.y_q_smooth
         else: # moving fast, no smoothing
             x_smooth = x_diff
             y_smooth = y_diff
+
+        # Prevent small jittering when holding mouse cursor still inside deadzone.
+        accel_avg = math.sqrt(phil.x_q_smooth**2 + phil.y_q_smooth**2)
+        if accel_avg > 0 and accel_avg < args.deadzone:
+            continue
 
         # The Magic Happens Now!
         x_cur, y_cur = getCursorPos()
