@@ -36,20 +36,16 @@ parser.add_argument(
     "-d", "--deadzone", type=float, default=0.03, help="Mouse must move by at least this much, otherwise it stays still. Use this if you are having difficulty with small mouse movements, or with keeping the cursor still. Recommend 0.0 - 0.15, default 0.03"
 )
 parser.add_argument(
-    "-H",
-    "--host",
-    type=str,
-    default="0.0.0.0",
-    help="bind to ip address, default 0.0.0.0",
-)
-parser.add_argument(
-    "-p", "--port", type=int, default=4245, help="bind to port, default 4245"
-)
-parser.add_argument(
     "-t", "--timeout", type=int, default=0, help="turn off after N seconds (eg. 60*60*8 is 8 hours or one workday), default off"
 )
 parser.add_argument(
     "-w", "--keepawake", type=int, default=0, help="Keep PC awake by randomly moving the mouse a few pixels every N seconds, default off"
+)
+parser.add_argument(
+    "--ip", type=str, default="224.3.0.186", help="ip address to listen on, default 224.3.0.186 (udp multicast group). Use 0.0.0.0 for direct udp, but this requires the server to know the client's ip."
+)
+parser.add_argument(
+    "--port", type=int, default=4245, help="bind to port, default 4245"
 )
 
 args = parser.parse_args()
@@ -92,7 +88,12 @@ listener.start()
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Without a timeout, this script will "hang" if nothing is received
 sock.settimeout(1)
-sock.bind((args.host, args.port))  # Register our socket
+sock.bind(("0.0.0.0", args.port))  # Register our socket
+# https://pymotw.com/2/socket/multicast.html
+if args.ip.startswith("224"): # multicast
+    group = socket.inet_aton(args.ip)
+    mreq = struct.pack('4sL', group, socket.INADDR_ANY)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
 # How to get local IP address in python?
 text_listening = (
