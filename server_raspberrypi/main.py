@@ -20,15 +20,6 @@ print(text.intro)
 # parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--ip",
-    required=True,
-    type=str,
-    help="remote ip address of PC that will receive mouse movements (find your PC's home network ip, not internet ip; usually 192.x.x.x, 172.x.x.x, or 10.x.x.x)",
-)
-parser.add_argument(
-    "-p", "--port", type=int, default=4245, help="send to remote port, default 4245"
-)
-parser.add_argument(
     "-v", "--verbose", action="store_true", help="enable verbose logging"
 )
 parser.add_argument(
@@ -69,6 +60,15 @@ parser.add_argument(
 )
 parser.add_argument(
     "--timeout", type=int, default=(60*60*8), help="exit after n seconds, default 60*60*8 = 8 hours, one workday"
+)
+parser.add_argument(
+    "--ip",
+    type=str,
+    default="224.3.0.186",
+    help="remote ip address of PC that will receive mouse movements, default 224.3.0.186(udp multicast group). Or, find your PC's home network ip (not internet ip); usually 192.x.x.x, 172.x.x.x, or 10.x.x.x",
+)
+parser.add_argument(
+    "--port", type=int, default=4245, help="send to remote port, default 4245"
 )
 args = parser.parse_args()
 
