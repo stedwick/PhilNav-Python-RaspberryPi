@@ -1,13 +1,13 @@
-import argparse
-import logging
+import argparse, logging
 from time import time, ctime
 from dataclasses import dataclass
+import math, random
 from collections import deque  # for storing x, y time series
 import socket  # udp networking
 import struct  # binary unpacking
 from pynput import keyboard # for hotkeys
 
-print("\n\nCLIENT: Starting PhilNav\n")
+print("\n\nCLIENT: Starting PhilNav\n\nWelcome to PhilNav, I'm Phil!\n\nUse --help for more info.\n")
 
 import platform
 match platform.system():
@@ -33,14 +33,19 @@ parser.add_argument(
     "-S", "--smooth", type=int, default=3, help="averages mouse movements to smooth out jittering, default 3"
 )
 parser.add_argument(
-    "-H",
-    "--host",
-    type=str,
-    default="0.0.0.0",
-    help="bind to ip address, default 0.0.0.0",
+    "-d", "--deadzone", type=float, default=0.03, help="Mouse must move by at least this much, otherwise it stays still. Use this if you are having difficulty with small mouse movements, or with keeping the cursor still. Recommend 0.0 - 0.15, default 0.03"
 )
 parser.add_argument(
-    "-p", "--port", type=int, default=4245, help="bind to port, default 4245"
+    "-t", "--timeout", type=int, default=0, help="turn off after N seconds (eg. 60*60*8 is 8 hours or one workday), default off"
+)
+parser.add_argument(
+    "-w", "--keepawake", type=int, default=0, help="Keep PC awake by randomly moving the mouse a few pixels every N seconds, default off"
+)
+parser.add_argument(
+    "--ip", type=str, default="224.3.0.186", help="ip address to listen on, default 224.3.0.186 (udp multicast group). Use 0.0.0.0 for direct udp, but this requires the server to know the client's ip."
+)
+parser.add_argument(
+    "--port", type=int, default=4245, help="bind to port, default 4245"
 )
 
 args = parser.parse_args()
@@ -83,7 +88,12 @@ listener.start()
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Without a timeout, this script will "hang" if nothing is received
 sock.settimeout(1)
-sock.bind((args.host, args.port))  # Register our socket
+sock.bind(("0.0.0.0", args.port))  # Register our socket
+# https://pymotw.com/2/socket/multicast.html
+if args.ip.startswith("224"): # multicast
+    group = socket.inet_aton(args.ip)
+    mreq = struct.pack('4sL', group, socket.INADDR_ANY)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
 # How to get local IP address in python?
 text_listening = (
@@ -102,6 +112,7 @@ smooth_long = args.smooth*3+1
 @dataclass
 class phil:
     time_start = time()
+    time_last_moved = time()
     time_debug = time()
     debug_num = 0
     x_q = deque([], args.smooth)
@@ -120,11 +131,33 @@ def smooth(q):
     return avg
 
 
+# for keep-awake
+def mouse_move_random():
+    x_cur, y_cur = getCursorPos()
+    x_new = round(x_cur + random.randint(-5, 5))
+    y_new = round(y_cur + random.randint(-5, 5))
+    setCursorPos(x_new, y_new)  # move mouse cursor
+
+
 # Main event loop:
 # 1. Receive mouse delta over UDP
 # 2. Update mouse cursor position
 # 3. Repeat forever until Ctrl-C
 while True:
+    # timers
+    time_iter = time()
+    time_btwn_moves = time_iter - phil.time_last_moved
+    time_since_start = time_iter - phil.time_start
+
+    # time-based functionality
+    if args.timeout > 0 and time_since_start > args.timeout:
+        break
+    if not enabled:
+        if args.keepawake > 0 and time_btwn_moves > args.keepawake:
+            mouse_move_random()
+            phil.time_last_moved = time_iter
+
+    # get mouse data from Raspberry Pi        
     try:
         # 48 bytes of 6 doubles in binary C format. Why? Because it's
         # OpenTrack's protocol.
@@ -147,22 +180,31 @@ while True:
 
         # store recent mouse movements
         phil.x_q.append(x_diff)
+        phil.x_q_smooth = smooth(phil.x_q)
         phil.y_q.append(y_diff)
+        phil.y_q_smooth = smooth(phil.y_q)
         phil.x_q_long.append(x_diff)
+        phil.x_q_long_smooth = smooth(phil.x_q_long)
         phil.y_q_long.append(y_diff)
+        phil.y_q_long_smooth = smooth(phil.y_q_long)
 
         # Perform more smoothing the *slower* the mouse is moving.
         # A slow-moving cursor means the user is trying to precisely
         # point at something.
         if x_diff**2 + y_diff**2 < 0.2: # more smoothing
-            x_smooth = smooth(phil.x_q_long)
-            y_smooth = smooth(phil.y_q_long)
+            x_smooth = phil.x_q_long_smooth
+            y_smooth = phil.y_q_long_smooth
         elif x_diff**2 + y_diff**2 < 0.5: # less smoothing
-            x_smooth = smooth(phil.x_q)
-            y_smooth = smooth(phil.y_q)
+            x_smooth = phil.x_q_smooth
+            y_smooth = phil.y_q_smooth
         else: # moving fast, no smoothing
             x_smooth = x_diff
             y_smooth = y_diff
+
+        # Prevent small jittering when holding mouse cursor still inside deadzone.
+        accel_avg = math.sqrt(phil.x_q_smooth**2 + phil.y_q_smooth**2)
+        if accel_avg > 0 and accel_avg < args.deadzone:
+            continue
 
         # The Magic Happens Now!
         x_cur, y_cur = getCursorPos()
@@ -172,6 +214,7 @@ while True:
         x_new = round(x_cur + x_smooth * args.speed)
         y_new = round(y_cur + y_smooth * args.speed * 1.25)
         setCursorPos(x_new, y_new)  # move mouse cursor
+        phil.time_last_moved = time()
 
         # I'm trying to measure the total time from capturing the frame on the
         # camera to moving the mouse cursor on my PC. This isn't super accurate.
@@ -191,5 +234,5 @@ while True:
                     f"{now_str} - Received: ({'x_diff':>8},{'y_diff':>8})  ,{'n/a':>8},{'n/a':>8},{'time ms':>8},{'time cv':>8}"
                 )
             logging.info(
-                f"{now_str} - Received: ({x_diff:> 8.2f},{y_diff:> 8.2f})  ,{a:> 8.2f},{b:> 8.2f},{ms_time_diff:> 8.2f},{ms_opencv:>8.2f}"
+                f"{now_str} - Received: ({x_diff:> 8.2f},{y_diff:> 8.2f})  ,{a:> 8.2f},{b:> 8.2f},{ms_time_diff:>8},{ms_opencv:>8.2f}"
             )
