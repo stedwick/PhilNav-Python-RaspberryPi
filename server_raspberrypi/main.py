@@ -61,7 +61,7 @@ parser.add_argument(
     "--blob-color", type=int, default=255, help="OpenCV blob detection color, default 255 (white = 255, or black = 0)"
 )
 parser.add_argument(
-    "--timeout", type=int, default=(60*60*8), help="exit after n seconds, default 60*60*8 = 8 hours, one workday"
+    "--timeout", type=int, default=0, help="exit after n seconds, default none (uses heartbeat from client). Setting a timeout will run PhilNav for N seconds and then exit, ignoring heartbeats."
 )
 parser.add_argument(
     "--ip",
@@ -70,7 +70,7 @@ parser.add_argument(
     help="remote ip address of PC that will receive mouse movements, default 224.3.0.186 (udp multicast group). Or, find your PC's home network ip (not internet ip); usually 192.x.x.x, 172.x.x.x, or 10.x.x.x",
 )
 parser.add_argument(
-    "--port", type=int, default=4245, help="send to remote port, default 4245"
+    "--port", type=int, default=4245, help="send to remote port, default 4245. Receives heartbeats from client on port+1 (4246). If you have a firewall, these ports must be open to send/recv UDP."
 )
 args = parser.parse_args()
 
@@ -279,14 +279,17 @@ def blobby(request):
 
 picam2.pre_callback = blobby
 
+if args.timeout == 0:
+    heartbeat_thread = Thread(target=heartbeat_run, daemon=True)
+    heartbeat_thread.start()
 
-heartbeat_thread = Thread(target=heartbeat_run, daemon=True)
-heartbeat_thread.start()
-
-# Run the loop until timeout or Ctrl-C
+# Run the loop until Ctrl-C or timeout
 try:
+    t = args.timeout
+    if t == 0:
+        t = 60*60*24*365
     philnav_start()
-    sleep(60*60*24*365)  # turn off after a year
+    sleep(t)  # turn off after a year
 except KeyboardInterrupt:
     pass
 
