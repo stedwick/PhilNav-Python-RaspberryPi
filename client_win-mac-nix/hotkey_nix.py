@@ -22,6 +22,5 @@ def hotkey_run(callback=None):
         now = time()
         if now - hotkey_time > 0.25:
             hotkey_time = now
-            logging.info("Toggled PhilNav on/off\n")
             if callback:
                 callback()
