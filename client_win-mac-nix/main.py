@@ -1,24 +1,30 @@
-import argparse, logging
+import platform
+import argparse
+import logging
 from time import time, ctime
 from dataclasses import dataclass
-import math, random
+import math
+import random
 from collections import deque  # for storing x, y time series
 import socket  # udp networking
 import struct  # binary unpacking
-from pynput import keyboard # for hotkeys
+from threading import Thread
 
 print("\n\nCLIENT: Starting PhilNav\n\nWelcome to PhilNav, I'm Phil!\n\nUse --help for more info.\n")
 
-import platform
 match platform.system():
-    case "Darwin": # macOS
+    case "Darwin":  # macOS
         from mouse_mac import getCursorPos, setCursorPos
+        from hotkey_win_mac import hotkey_run
     case "Windows":
         from mouse_win import getCursorPos, setCursorPos
+        from hotkey_win_mac import hotkey_run
     case "Linux":
         from mouse_nix import getCursorPos, setCursorPos
+        from hotkey_nix import hotkey_run
     case _:
-        raise RuntimeError(f"Platform {platform.system()} not supported (not Win, Mac, or Nix)")
+        raise RuntimeError(
+            f"Platform {platform.system()} not supported (not Win, Mac, or Nix)")
 
 
 # parse command line arguments
@@ -61,26 +67,15 @@ if args.verbose:
 # Hotkey to pause/resume moving the mouse
 enabled = True
 
+
 def toggle():
     global enabled
     enabled = not enabled
     logging.info("Toggled PhilNav on/off\n")
 
-# Shift-F7 hard-coded for now
-hotkey_toggle = keyboard.HotKey(
-    [keyboard.Key.shift, keyboard.Key.f7.value],
-    toggle)
 
-# https://pynput.readthedocs.io/en/latest/keyboard.html#global-hotkeys
-def for_canonical(f):
-    global listener
-    return lambda k: f(listener.canonical(k))
-
-listener = keyboard.Listener(
-        on_press=for_canonical(hotkey_toggle.press),
-        on_release=for_canonical(hotkey_toggle.release))
-
-listener.start()
+hotkey_thread = Thread(target=hotkey_run, kwargs={"callback": toggle})
+hotkey_thread.start()
 
 
 # initialize networking
@@ -90,7 +85,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.settimeout(1)
 sock.bind(("0.0.0.0", args.port))  # Register our socket
 # https://pymotw.com/2/socket/multicast.html
-if args.ip.startswith("224"): # multicast
+if args.ip.startswith("224"):  # multicast
     group = socket.inet_aton(args.ip)
     mreq = struct.pack('4sL', group, socket.INADDR_ANY)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
@@ -109,6 +104,8 @@ print("\nPress Ctrl-C to exit, press Shift-F7 to pause/resume\n")
 
 # mouse (x_diff, y_diff) smoothing running averages
 smooth_long = args.smooth*3+1
+
+
 @dataclass
 class phil:
     time_start = time()
@@ -157,7 +154,7 @@ while True:
             mouse_move_random()
             phil.time_last_moved = time_iter
 
-    # get mouse data from Raspberry Pi        
+    # get mouse data from Raspberry Pi
     try:
         # 48 bytes of 6 doubles in binary C format. Why? Because it's
         # OpenTrack's protocol.
@@ -176,7 +173,8 @@ while True:
 
         # Using OpenTrack protocol, but PhilNav uses:
         #  x_diff, y_diff, n/a, n/a, camera capture time, OpenCV processing time
-        x_diff, y_diff, a, b, time_cam, ms_opencv = struct.unpack("dddddd", data)
+        x_diff, y_diff, a, b, time_cam, ms_opencv = struct.unpack(
+            "dddddd", data)
 
         # store recent mouse movements
         phil.x_q.append(x_diff)
@@ -191,13 +189,13 @@ while True:
         # Perform more smoothing the *slower* the mouse is moving.
         # A slow-moving cursor means the user is trying to precisely
         # point at something.
-        if x_diff**2 + y_diff**2 < 0.2: # more smoothing
+        if x_diff**2 + y_diff**2 < 0.2:  # more smoothing
             x_smooth = phil.x_q_long_smooth
             y_smooth = phil.y_q_long_smooth
-        elif x_diff**2 + y_diff**2 < 0.5: # less smoothing
+        elif x_diff**2 + y_diff**2 < 0.5:  # less smoothing
             x_smooth = phil.x_q_smooth
             y_smooth = phil.y_q_smooth
-        else: # moving fast, no smoothing
+        else:  # moving fast, no smoothing
             x_smooth = x_diff
             y_smooth = y_diff
 
