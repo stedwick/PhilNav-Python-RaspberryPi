@@ -48,10 +48,16 @@ parser.add_argument(
     "-w", "--keepawake", type=int, default=0, help="Keep PC awake by randomly moving the mouse a few pixels every N seconds, default off"
 )
 parser.add_argument(
-    "--ip", type=str, default="224.3.0.186", help="ip address to listen on, default 224.3.0.186 (udp multicast group). Use 0.0.0.0 for direct udp, but this requires the server to know the client's ip."
+    "--port", type=int, default=4245, help="bind to port, default 4245. Heartbeats use port+1 (4246). If you have a firewall, these ports must be open to send/recv UDP."
 )
 parser.add_argument(
-    "--port", type=int, default=4245, help="bind to port, default 4245"
+    "--bind-ip", type=str, default="0.0.0.0", help="ip address to bind to, default 0.0.0.0 (all)"
+)
+parser.add_argument(
+    "--client-ip", type=str, default="224.3.0.186", help="ip address to listen on, default 224.3.0.186 (udp multicast group). Use 0.0.0.0 for direct udp, but this requires the server to know the client's ip."
+)
+parser.add_argument(
+    "--server-ip", type=str, default="224.3.0.186", help="ip address to send heartbeats to (will wake server), default 224.3.0.186 (udp multicast group). Direct udp requires the server's ip for heartbeats, or disable heartbeats on the server."
 )
 
 args = parser.parse_args()
@@ -83,12 +89,20 @@ hotkey_thread.start()
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Without a timeout, this script will "hang" if nothing is received
 sock.settimeout(1)
-sock.bind(("0.0.0.0", args.port))  # Register our socket
+sock.bind((args.bind_ip, args.port))  # Register our socket
 # https://pymotw.com/2/socket/multicast.html
-if args.ip.startswith("224"):  # multicast
-    group = socket.inet_aton(args.ip)
+if args.client_ip.startswith("224"):  # join multicast group
+    group = socket.inet_aton(args.client_ip)
     mreq = struct.pack('4sL', group, socket.INADDR_ANY)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+# Set up UDP socket to server
+sock_heartbeat = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # datagrams over UDP
+sock_heartbeat_addr = (args.server_ip, args.port+1) # heartbeat on 1 port higher
+heartbeat_msg = struct.pack("dddddd", 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+def heartbeat():
+    sock_heartbeat.sendto(heartbeat_msg, sock_heartbeat_addr)
+
 
 # How to get local IP address in python?
 text_listening = (
@@ -105,12 +119,13 @@ print("\nPress Ctrl-C to exit, press Shift-F7 to pause/resume\n")
 # mouse (x_diff, y_diff) smoothing running averages
 smooth_long = args.smooth*3+1
 
+now = time()
 
 @dataclass
 class phil:
-    time_start = time()
-    time_last_moved = time()
-    time_debug = time()
+    time_start = now
+    time_last_moved = now
+    time_debug = now
     debug_num = 0
     x_q = deque([], args.smooth)
     x_q_smooth = 0
@@ -145,6 +160,8 @@ while True:
     time_iter = time()
     time_btwn_moves = time_iter - phil.time_last_moved
     time_since_start = time_iter - phil.time_start
+
+    heartbeat()
 
     # time-based functionality
     if args.timeout > 0 and time_since_start > args.timeout:
