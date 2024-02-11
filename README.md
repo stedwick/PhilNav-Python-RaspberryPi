@@ -1,2 +1,56 @@
 # PhilNav-Python_SmartNav-RaspberryPi
-DIY SmartNav infrared head-mouse in Python using Raspberry Pi w/ NoIR camera over local UDP network, 60 FPS
+
+
+## Intro
+
+PhilNav is a perfectly reverse-engineered NaturalPoint SmartNav infrared head-mouse. It runs at >60 FPS for buttery smooth mouse movements and pixel perfect accuracy. 
+
+It allows you to use your computer hands-free by tracking a reflective sticker on your head, and then moving the mouse accordingly.
+
+Watch Phil's YouTube video here:
+
+There's \*lots\* of assembly required since the Raspberry Pi has to be built. You can buy a pre-built PhilNav from Phil on Shopify here: 
+
+It uses a client/server model; the server runs on a Raspberry Pi with a Picam 3 NoIR camera, and the client runs on your Windows, Apple macOS, or Linux PC. They communicate over Wi-Fi or ethernet via UDP multicast.
+
+It's free and open source on GitHub, written from scratch in Python3 by Philip Brocoum. There are no dependencies on the original SmartNav hardware or software (it's discontinued anyway by NaturalPoint). 
+
+## Running PhilNav
+
+Start by running the following Python scripts on the client and server. You may have to ```pip install``` a bunch of things first. I put my reflective sticker on my headset mic boom. 
+
+#### Server - Raspberry Pi
+```
+python3 server_raspberrypi/main.py --verbose --preview
+```
+
+#### Client PC - Win/Mac/Nix
+```
+python3 client_win-mac-nix/main.py --verbose
+```
+
+On the Raspberry Pi you should see a preview of the camera, and on the client machine the mouse should start to move. Use ```--help``` to change your settings to your liking.
+
+Here are my own settings:
+
+```
+python3 server_raspberrypi/main.py 
+
+python3 client_win-mac-nix/main.py --speed 21 --smooth 3 --deadzone 0.04 --keepawake 56 --timeout $((60*60*8))
+```
+
+(If you have a firewall, ports 4245 & 4246 must be open to send/recv UDP.)
+
+## Building PhilNav
+
+Watch the YouTube video here:
+
+Parts:
+- Raspberry Pi 5 - https://www.canakit.com/canakit-raspberry-pi-5-starter-kit-turbine-black.html
+- Pi Breadboard kit - https://www.canakit.com/raspberry-pi-gpio-breakout-bundle.html
+- Pi Camera Module 3 NoIR - https://www.canakit.com/raspberry-pi-camera-module-3.html
+- Pi 5 Camera Cable - https://www.canakit.com/raspberry-pi-5-camera-cable.html
+- Infrared LEDs - https://www.amazon.com/gp/product/B01BVGIZIU
+- Visible light filter - https://www.amazon.com/dp/B0CL2652X9
+- Reflective tape - https://www.amazon.com/dp/B06VTTV6PR
+- Selfie Stick - https://www.amazon.com/dp/B09W99QJBP
