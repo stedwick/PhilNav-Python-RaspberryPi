@@ -102,6 +102,7 @@ sock_heartbeat_addr = (args.server_ip, args.port+1) # heartbeat on 1 port higher
 heartbeat_msg = struct.pack("dddddd", 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
 def heartbeat():
     sock_heartbeat.sendto(heartbeat_msg, sock_heartbeat_addr)
+    logging.info("Sent heartbeat.\n")
 
 
 # How to get local IP address in python?
@@ -126,6 +127,7 @@ class phil:
     time_start = now
     time_last_moved = now
     time_debug = now
+    time_heartbeat = now
     debug_num = 0
     x_q = deque([], args.smooth)
     x_q_smooth = 0
@@ -161,7 +163,9 @@ while True:
     time_btwn_moves = time_iter - phil.time_last_moved
     time_since_start = time_iter - phil.time_start
 
-    heartbeat()
+    if enabled and (time_iter - phil.time_heartbeat > 3):
+        heartbeat()
+        phil.time_heartbeat = time_iter
 
     # time-based functionality
     if args.timeout > 0 and time_since_start > args.timeout:
