@@ -80,7 +80,7 @@ def toggle():
     logging.info("Toggled PhilNav on/off\n")
 
 
-hotkey_thread = Thread(target=hotkey_run, kwargs={"callback": toggle})
+hotkey_thread = Thread(target=hotkey_run, kwargs={"callback": toggle}, daemon=True)
 hotkey_thread.start()
 
 

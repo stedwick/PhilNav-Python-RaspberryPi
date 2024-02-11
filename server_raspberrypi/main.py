@@ -2,6 +2,7 @@ import argparse
 import logging
 from time import time, ctime, perf_counter, sleep
 from dataclasses import dataclass
+from threading import Thread
 import socket  # udp networking
 import struct  # binary packing
 from picamera2 import Picamera2, Preview, MappedArray  # Raspberry Pi camera
@@ -121,18 +122,74 @@ params.filterByInertia = False
 detector = cv2.SimpleBlobDetector_create(params)
 
 
+def philnav_start():
+    if picam2.started:
+        return
+    if args.preview:
+        picam2.start_preview(Preview.QT)
+    else:
+        picam2.start_preview(Preview.NULL)
+
+    # Not sure if we need both start_preview and start.
+    picam2.start()
+    sleep(1)  # let camera warm up
+
+    # show intro again
+    print(text.intro)
+    if args.preview:
+        print(text.preview)
+
+
+def philnav_stop():  # cleanup
+    if not picam2.started:
+        return
+    picam2.stop_preview()
+    picam2.stop()
+
+
 # Set up UDP socket to receiving computer
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # datagrams over UDP
 sock_addr = (args.ip, args.port)
 
+# initialize networking
+# Read heartbeat datagrams over UDP
+sock_heartbeat = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# Without a timeout, this script will "hang" if nothing is received
+sock_heartbeat.settimeout(60*10)
+sock_heartbeat.bind(("0.0.0.0", args.port+1))  # Register our socket
+# https://pymotw.com/2/socket/multicast.html
+if args.ip.startswith("224"):  # join multicast group
+    group = socket.inet_aton(args.ip)
+    mreq = struct.pack('4sL', group, socket.INADDR_ANY)
+    sock_heartbeat.setsockopt(
+        socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
+
+def heartbeat_run():
+    while True:
+        try:
+            data, addr = sock_heartbeat.recvfrom(48)
+        except TimeoutError:
+            logging.info(f"{ctime()} - Waiting for a heartbeat from client...")
+            philnav_stop()
+            continue
+        else:
+            logging.info(f"{ctime()} - Received heartbeat from client.")
+            philnav_start()
+
+
+now = time()
+perf = perf_counter()
 # Global for storing data from loop-to-loop, also stats for debugging
+
+
 @dataclass
 class phil:
-    started_at = time()
-    frame_started_at = time()
-    frame_perf = perf_counter()
-    frame_between = perf_counter()
+    started_at = now
+    heartbeat_at = now
+    frame_started_at = now
+    frame_perf = perf
+    frame_between = perf
     frame_num = 0
     x = 0.0
     y = 0.0
@@ -223,32 +280,15 @@ def blobby(request):
 picam2.pre_callback = blobby
 
 
-def philnav_start():
-    if args.preview:
-        picam2.start_preview(Preview.QT)
-    else:
-        picam2.start_preview(Preview.NULL)
-
-    # Not sure if we need both start_preview and start.
-    picam2.start()
-    sleep(1)  # let camera warm up
-
-    # show intro again
-    print(text.intro)
-    if args.preview:
-        print(text.preview)
-
-
-def philnav_stop():  # cleanup
-    picam2.stop_preview()
-    picam2.stop()
-
+heartbeat_thread = Thread(target=heartbeat_run, daemon=True)
+heartbeat_thread.start()
 
 # Run the loop until timeout or Ctrl-C
 try:
     philnav_start()
-    sleep(args.timeout)  # turn off at some point
+    sleep(60*60*24*365)  # turn off after a year
 except KeyboardInterrupt:
-    philnav_stop()
+    pass
 
+philnav_stop()
 picam2.close()
