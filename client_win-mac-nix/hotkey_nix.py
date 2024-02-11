@@ -1,6 +1,5 @@
 from Xlib import X, display
 from time import time
-import logging
 
 my_display = display.Display()
 my_screen = my_display.screen()
@@ -15,7 +14,7 @@ def hotkey_run(callback=None):
     # we tell the X server we want to catch keyPress event
     my_root.change_attributes(event_mask=X.KeyPressMask)
     # Shift + F7
-    my_root.grab_key(73, X.ShiftMask, True, X.GrabModeAsync, X.GrabModeAsync)
+    my_root.grab_key(73, X.AnyModifier, True, X.GrabModeAsync, X.GrabModeAsync)
 
     while True:
         my_event = my_display.next_event()

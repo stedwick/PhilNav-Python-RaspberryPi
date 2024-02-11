@@ -79,7 +79,6 @@ def toggle():
     enabled = not enabled
     logging.info("Toggled PhilNav on/off\n")
 
-
 hotkey_thread = Thread(target=hotkey_run, kwargs={"callback": toggle}, daemon=True)
 hotkey_thread.start()
 
@@ -107,7 +106,7 @@ def heartbeat():
 
 # How to get local IP address in python?
 text_listening = (
-    f"Listening on {sock.getsockname()} for mouse data from Raspberry Pi server..."
+    f"Listening on {args.client_ip} for mouse data from Raspberry Pi server..."
 )
 print(ctime() + " - " + text_listening)
 print("\nPress Ctrl-C to exit, press Shift-F7 to pause/resume\n")
