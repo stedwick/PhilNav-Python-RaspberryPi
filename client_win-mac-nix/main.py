@@ -42,7 +42,7 @@ parser.add_argument(
     "-d", "--deadzone", type=float, default=0.03, help="Mouse must move by at least this much, otherwise it stays still. Use this if you are having difficulty with small mouse movements, or with keeping the cursor still. Recommend 0.0 - 0.15, default 0.03"
 )
 parser.add_argument(
-    "-t", "--timeout", type=int, default=0, help="turn off after N seconds (eg. 60*60*8 is 8 hours or one workday), default off"
+    "-t", "--timeout", type=int, default=60*60*24, help="turn off after N seconds (eg. 60*60*8 is 8 hours or one workday), default 24 hours"
 )
 parser.add_argument(
     "-w", "--keepawake", type=int, default=0, help="Keep PC awake by randomly moving the mouse a few pixels every N seconds, default off"
@@ -185,7 +185,7 @@ while True:
         # https://github.com/opentrack/opentrack/issues/747
         data, addr = sock.recvfrom(48)
     except TimeoutError:
-        if int(time() - phil.time_start) % 5 == 0:
+        if enabled and (int(time() - phil.time_start) % 5 == 0):
             logging.info(f"{ctime()} - {text_listening}")
         continue
     else:
