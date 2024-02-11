@@ -14,6 +14,7 @@ class text:
     intro = "\n\nSERVER: Starting PhilNav\n\nWelcome to PhilNav, I'm Phil!\n\nIf running PhilNav for the first time, use --help and --preview to set up your camera.\n"
     preview = "Adjust the camera controls (listed with --help) until you get a mostly black picture with bright white reflective IR sticker in the center. The controls default to what worked for Phil via trial and error.\n"
 
+
 print(text.intro)
 
 
@@ -65,7 +66,7 @@ parser.add_argument(
     "--ip",
     type=str,
     default="224.3.0.186",
-    help="remote ip address of PC that will receive mouse movements, default 224.3.0.186(udp multicast group). Or, find your PC's home network ip (not internet ip); usually 192.x.x.x, 172.x.x.x, or 10.x.x.x",
+    help="remote ip address of PC that will receive mouse movements, default 224.3.0.186 (udp multicast group). Or, find your PC's home network ip (not internet ip); usually 192.x.x.x, 172.x.x.x, or 10.x.x.x",
 )
 parser.add_argument(
     "--port", type=int, default=4245, help="send to remote port, default 4245"
@@ -101,21 +102,6 @@ controls = {
     "FrameRate": args.fps
 }
 picam2.set_controls(controls)
-
-if args.preview:
-    picam2.start_preview(Preview.QT)
-else:
-    picam2.start_preview(Preview.NULL)
-
-# Not sure if we need both start_preview and start.
-picam2.start()
-sleep(1)  # let camera warm up
-
-
-# show intro again
-print(text.intro)
-if args.preview:
-    print(text.preview)
 
 
 # OpenCV blob detection config
@@ -234,15 +220,35 @@ def blobby(request):
         phil.frame_between = perf_counter()
 
 
+picam2.pre_callback = blobby
+
+
+def philnav_start():
+    if args.preview:
+        picam2.start_preview(Preview.QT)
+    else:
+        picam2.start_preview(Preview.NULL)
+
+    # Not sure if we need both start_preview and start.
+    picam2.start()
+    sleep(1)  # let camera warm up
+
+    # show intro again
+    print(text.intro)
+    if args.preview:
+        print(text.preview)
+
+
+def philnav_stop():  # cleanup
+    picam2.stop_preview()
+    picam2.stop()
+
+
 # Run the loop until timeout or Ctrl-C
 try:
-    picam2.pre_callback = blobby
+    philnav_start()
     sleep(args.timeout)  # turn off at some point
 except KeyboardInterrupt:
-    pass
+    philnav_stop()
 
-
-# cleanup
-picam2.stop_preview()
-picam2.stop()
 picam2.close()
