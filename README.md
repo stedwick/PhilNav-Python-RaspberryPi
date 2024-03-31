@@ -47,7 +47,7 @@ Start by running the following Python scripts on the client and server. You may 
 
 ```
 # server
-sudo apt install python3-picamera
+sudo apt install python3-opencv
 
 # client
 pip install ...
