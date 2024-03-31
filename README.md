@@ -22,6 +22,13 @@ The trade-offs I made include:
 1. Not Plug-and-Play Over USB, uses the network (Wi-Fi, ethernet)
 1. Difficult to assemble and install (knowledge of building Raspberry Pi computers and Python required)
 
+There are many other head-mice, but mine's the best:
+* https://smylemouse.com
+* https://abilitare.com
+* https://glassouse.com
+* https://www.orin.com/access/headmouse/
+* https://www.spectronics.com.au/product/trackerpro-2
+
 Watch Phil's YouTube video here:
 
 There's \*lots\* of assembly required since the Raspberry Pi has to be built. You can buy a pre-built PhilNav from Phil here: 
