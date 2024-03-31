@@ -7,7 +7,11 @@ PhilNav is a *very good* infrared head mouse, sorta like the discontinued Natura
 
 [Note: zero hardware or software is from the SmartNav, everything is built and programmed 100% from scratch by me, Phil.]
 
-It allows you to use your computer hands-free by tracking a reflective sticker on your head, and then moving the mouse accordingly.
+I also have a speech-to-text dictation app. Combined with this, use your computer completely hands-free: https://phils.app
+
+PhilNav allows you to use your computer hands-free by tracking a reflective sticker on your head, and then moving the mouse accordingly.
+
+-----
 
 PhilNav has exceeded all my expectations. It's better than the original SmartNav, and I hit all of my goals:
 
@@ -84,3 +88,7 @@ Parts:
 - Visible light filter - https://www.amazon.com/dp/B0CL2652X9
 - Reflective tape - https://www.amazon.com/dp/B06VTTV6PR
 - Selfie Stick - https://www.amazon.com/dp/B09W99QJBP
+
+-----
+
+With this open source project, disabled folks not at the mercy of a private company that might discontinue products, and we are not stuck on Windows =)
