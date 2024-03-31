@@ -34,6 +34,14 @@ It's free and open source on GitHub, written from scratch in Python3 by Philip B
 
 Start by running the following Python scripts on the client and server. You may have to ```pip install``` a bunch of things first. I put my reflective sticker on my headset mic boom. 
 
+```
+# server
+sudo apt install python3-picamera
+
+# client
+pip install ...
+```
+
 #### Server - Raspberry Pi
 ```
 python3 server_raspberrypi/main.py --verbose --preview
