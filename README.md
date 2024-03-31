@@ -3,7 +3,9 @@
 
 ## Intro
 
-PhilNav is a perfectly reverse-engineered NaturalPoint SmartNav infrared head-mouse. It runs at >60 FPS for buttery smooth mouse movements and pixel perfect accuracy. 
+PhilNav is a *very good* infrared head mouse, sorta like the discontinued NaturalPoint SmartNav. It runs at 75 FPS for buttery smooth mouse movements and pixel perfect accuracy. 
+
+[Note: zero hardware or software is from the SmartNav, everything is built and programmed 100% from scratch by me, Phil.]
 
 It allows you to use your computer hands-free by tracking a reflective sticker on your head, and then moving the mouse accordingly.
 
@@ -22,7 +24,7 @@ The trade-offs I made include:
 
 Watch Phil's YouTube video here:
 
-There's \*lots\* of assembly required since the Raspberry Pi has to be built. You can buy a pre-built PhilNav from Phil on Shopify here: 
+There's \*lots\* of assembly required since the Raspberry Pi has to be built. You can buy a pre-built PhilNav from Phil here: 
 
 It uses a client/server model; the server runs on a Raspberry Pi with a Picam 3 NoIR camera, and the client runs on your Windows, Apple macOS, or Linux PC. They communicate over Wi-Fi or ethernet via UDP multicast.
 
