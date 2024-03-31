@@ -39,7 +39,7 @@ There's \*lots\* of assembly required since the Raspberry Pi has to be built. Yo
 
 It uses a client/server model; the server runs on a Raspberry Pi with a Picam 3 NoIR camera, and the client runs on your Windows, Apple macOS, or Linux PC. They communicate over Wi-Fi or ethernet via UDP multicast.
 
-It's free and open source on GitHub, written from scratch in Python3 by Philip Brocoum. There are no dependencies on the original SmartNav hardware or software (it's discontinued anyway by NaturalPoint). 
+It's free and open source on GitHub, written from scratch in Python3 by Philip Brocoum. There are no dependencies on the original SmartNav hardware or software (it's discontinued anyway by NaturalPoint as of 2018). 
 
 ## Running PhilNav
 
