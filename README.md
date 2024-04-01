@@ -19,6 +19,7 @@ PhilNav has exceeded all my expectations. It's better than the original SmartNav
 1. 5 ms latency, at 75 FPS
 1. Cross-platform on Windows, Mac, & Linux
 1. Configurable, with keyboard shortcuts
+1. <1% CPU/RAM on client
 
 The trade-offs I made include:
 
