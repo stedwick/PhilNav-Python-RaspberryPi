@@ -25,6 +25,7 @@ The trade-offs I made include:
 1. No graphical user interface
 1. Not Plug-and-Play Over USB, uses the network (Wi-Fi, ethernet)
 1. Difficult to assemble and install (knowledge of building Raspberry Pi computers and Python required)
+1. No clicking. You'll have to use a switch, pedal, or other dwell clicking software.
 
 There are many other head-mice, but mine's the best:
 * https://smylemouse.com
@@ -32,6 +33,8 @@ There are many other head-mice, but mine's the best:
 * https://glassouse.com
 * https://www.orin.com/access/headmouse/
 * https://www.spectronics.com.au/product/trackerpro-2
+* https://www.quha.com
+* https://eviacam.crea-si.com/
 
 Watch Phil's YouTube video here:
 
