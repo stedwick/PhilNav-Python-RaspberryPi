@@ -15,9 +15,11 @@ Watch Phil's YouTube video here: https://youtu.be/JTLs7z0PO-k
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/JTLs7z0PO-k/0.jpg)](https://www.youtube.com/watch?v=JTLs7z0PO-k)
 
+There's \*lots\* of assembly required since the Raspberry Pi has to be built. You can buy a pre-built PhilNav from Phil here: https://philipb.gumroad.com/l/philnav
+
 -----
 
-PhilNav has exceeded all my expectations. It's better than the original SmartNav, and I hit all of my goals:
+PhilNav has exceeded all my expectations. It's better than other head-mice, and I hit all of my goals:
 
 1. Pixel perfect accuracy
 1. 5 ms latency, at 75 FPS
@@ -41,11 +43,9 @@ There are many other head-mice, but mine's the best:
 * https://www.quha.com
 * https://eviacam.crea-si.com/
 
-There's \*lots\* of assembly required since the Raspberry Pi has to be built. You can buy a pre-built PhilNav from Phil here: 
-
 It uses a client/server model; the server runs on a Raspberry Pi with a Picam 3 NoIR camera, and the client runs on your Windows, Apple macOS, or Linux PC. They communicate over Wi-Fi or ethernet via UDP multicast.
 
-It's free and open source on GitHub, written from scratch in Python3 by Philip Brocoum. There are no dependencies on the original SmartNav hardware or software (it's discontinued anyway by NaturalPoint as of 2018). 
+It's free and open source on GitHub, written from scratch in Python3 by Philip Brocoum. There are no dependencies on the 2002 SmartNav hardware or software (it's discontinued anyway by NaturalPoint as of 2018). 
 
 ## Running PhilNav
 
