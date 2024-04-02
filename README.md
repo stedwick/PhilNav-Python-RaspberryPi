@@ -11,6 +11,10 @@ PhilNav allows you to use your computer hands-free by tracking a reflective stic
 
 I also have a speech-to-text dictation app. Combined with this, use your computer completely hands-free: https://phils.app
 
+Watch Phil's YouTube video here: https://youtu.be/JTLs7z0PO-k
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/JTLs7z0PO-k/0.jpg)](https://www.youtube.com/watch?v=JTLs7z0PO-k)
+
 -----
 
 PhilNav has exceeded all my expectations. It's better than the original SmartNav, and I hit all of my goals:
@@ -36,8 +40,6 @@ There are many other head-mice, but mine's the best:
 * https://www.spectronics.com.au/product/trackerpro-2
 * https://www.quha.com
 * https://eviacam.crea-si.com/
-
-Watch Phil's YouTube video here:
 
 There's \*lots\* of assembly required since the Raspberry Pi has to be built. You can buy a pre-built PhilNav from Phil here: 
 
