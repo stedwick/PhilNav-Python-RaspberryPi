@@ -61,6 +61,9 @@ parser.add_argument(
     "--blob-color", type=int, default=255, help="OpenCV blob detection color, default 255 (white = 255, or black = 0)"
 )
 parser.add_argument(
+    "--contours", action="store_true", help="Tracks the outer perimeter of your reflective sticker. Eg. a pacman shape is tracked as a full circle. This can provide better tracking if your sticker is dull or off-center."
+)
+parser.add_argument(
     "--timeout", type=int, default=0, help="exit after n seconds, default none (uses heartbeat from client). Setting a timeout will run PhilNav for N seconds and then exit, ignoring heartbeats."
 )
 parser.add_argument(
@@ -211,6 +214,14 @@ def blobby(request):
 
     # MappedArray gives direct access to the captured camera frame
     with MappedArray(request, "main") as m:
+        # https://www.fypsolutions.com/opencv-python/findcontours-opencv-python-drawcontours-opencv-python/
+        if args.contours:
+            im_gray = cv2.cvtColor(m.array, cv2.COLOR_BGR2GRAY)
+            contours, _hierarchy = cv2.findContours(im_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if len(contours) > 0:
+                contours_biggest = max(contours, key = cv2.contourArea)
+                cv2.drawContours(m.array, [contours_biggest], -1, (255,255,255), cv2.FILLED)
+
         # Track the IR sticker
         keypoints = detector.detect(m.array)
         if args.preview:
