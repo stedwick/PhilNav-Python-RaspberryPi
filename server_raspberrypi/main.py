@@ -61,6 +61,9 @@ parser.add_argument(
     "--blob-color", type=int, default=255, help="OpenCV blob detection color, default 255 (white = 255, or black = 0)"
 )
 parser.add_argument(
+    "--blob-min-threshold", type=int, default=200, help="Blob must be this bright to detect, default 200 (white = 255, or black = 0)"
+)
+parser.add_argument(
     "--contours", action="store_true", help="Tracks the outer perimeter of your reflective sticker. Eg. a pacman shape is tracked as a full circle. This can provide better tracking if your sticker is dull or off-center."
 )
 parser.add_argument(
@@ -114,7 +117,7 @@ params.filterByArea = True
 params.minArea = args.blob_size
 params.filterByColor = True
 params.blobColor = args.blob_color
-params.minThreshold = 200
+params.minThreshold = args.blob_min_threshold
 params.maxThreshold = 255
 params.thresholdStep = 50
 params.minRepeatability = 2
