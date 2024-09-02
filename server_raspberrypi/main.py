@@ -8,6 +8,7 @@ import struct  # binary packing
 from picamera2 import Picamera2, Preview, MappedArray  # Raspberry Pi camera
 from libcamera import Transform  # taking selfies, so used to mirror image
 import cv2  # OpenCV, for blob detection
+from scale_contour import scale_contour
 
 
 @dataclass
@@ -222,8 +223,13 @@ def blobby(request):
             im_gray = cv2.cvtColor(m.array, cv2.COLOR_BGR2GRAY)
             contours, _hierarchy = cv2.findContours(im_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             if len(contours) > 0:
-                contours_biggest = max(contours, key = cv2.contourArea)
-                cv2.drawContours(m.array, [contours_biggest], -1, (255,255,255), cv2.FILLED)
+                contour_biggest = max(contours, key=cv2.contourArea)
+                convex_hull = cv2.convexHull(contour_biggest)
+                hull_scaled = scale_contour(convex_hull, 0.5)
+                if hull_scaled is not None:
+                    cv2.drawContours(
+                        m.array, [hull_scaled], -1, (255, 255, 255), cv2.FILLED
+                    )
 
         # Track the IR sticker
         keypoints = detector.detect(m.array)
