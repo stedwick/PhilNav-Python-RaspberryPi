@@ -220,7 +220,7 @@ def blobby(request):
         # https://www.fypsolutions.com/opencv-python/findcontours-opencv-python-drawcontours-opencv-python/
         if args.contours:
             im_gray = cv2.cvtColor(m.array, cv2.COLOR_BGR2GRAY)
-            contours, _hierarchy = cv2.findContours(im_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours, _hierarchy = cv2.findContours(im_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             if len(contours) > 0:
                 contours_biggest = max(contours, key = cv2.contourArea)
                 cv2.drawContours(m.array, [contours_biggest], -1, (255,255,255), cv2.FILLED)
