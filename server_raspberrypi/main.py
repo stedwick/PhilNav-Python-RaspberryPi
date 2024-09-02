@@ -26,7 +26,9 @@ parser.add_argument(
     "-v", "--verbose", action="store_true", help="enable verbose logging"
 )
 parser.add_argument(
-    "--preview", action="store_true", help="Use when logged into Raspberry Pi Gui; will show camera preview."
+    "--preview",
+    action="store_true",
+    help="Use when logged into Raspberry Pi Gui; will show camera preview.",
 )
 parser.add_argument(
     "--fps", type=float, default=75.0, help="camera FrameRate, default 75"
@@ -53,22 +55,35 @@ parser.add_argument(
     "--saturation", type=float, default=0.0, help="camera Saturation, default 0.0"
 )
 parser.add_argument(
-    "--no-hflip", action="store_true", help="images are selfies and flipped horizontally by default"
+    "--no-hflip",
+    action="store_true",
+    help="images are selfies and flipped horizontally by default",
 )
 parser.add_argument(
     "--blob-size", type=int, default=15, help="OpenCV blob minimum size, default 15"
 )
 parser.add_argument(
-    "--blob-color", type=int, default=255, help="OpenCV blob detection color, default 255 (white = 255, or black = 0)"
+    "--blob-color",
+    type=int,
+    default=255,
+    help="OpenCV blob detection color, default 255 (white = 255, or black = 0)",
 )
 parser.add_argument(
-    "--blob-min-threshold", type=int, default=200, help="Blob must be this bright to detect, default 200 (white = 255, or black = 0)"
+    "--blob-min-threshold",
+    type=int,
+    default=200,
+    help="Blob must be this bright to detect, default 200 (white = 255, or black = 0)",
 )
 parser.add_argument(
-    "--contours", action="store_true", help="Tracks the outer perimeter of your reflective sticker. Eg. a pacman shape is tracked as a full circle. This can provide better tracking if your sticker is dull or off-center."
+    "--contours",
+    action="store_true",
+    help="Tracks the outer perimeter of your reflective sticker. Eg. a pacman shape is tracked as a full circle. This can provide better tracking if your sticker is dull or off-center.",
 )
 parser.add_argument(
-    "--timeout", type=int, default=0, help="exit after n seconds, default none (uses heartbeat from client). Setting a timeout will run PhilNav for N seconds and then exit, ignoring heartbeats."
+    "--timeout",
+    type=int,
+    default=0,
+    help="exit after n seconds, default none (uses heartbeat from client). Setting a timeout will run PhilNav for N seconds and then exit, ignoring heartbeats.",
 )
 parser.add_argument(
     "--ip",
@@ -77,7 +92,10 @@ parser.add_argument(
     help="remote ip address of PC that will receive mouse movements, default 224.3.0.186 (udp multicast group). Or, find your PC's home network ip (not internet ip); usually 192.x.x.x, 172.x.x.x, or 10.x.x.x",
 )
 parser.add_argument(
-    "--port", type=int, default=4245, help="send to remote port, default 4245. Receives heartbeats from client on port+1 (4246). If you have a firewall, these ports must be open to send/recv UDP."
+    "--port",
+    type=int,
+    default=4245,
+    help="send to remote port, default 4245. Receives heartbeats from client on port+1 (4246). If you have a firewall, these ports must be open to send/recv UDP.",
 )
 args = parser.parse_args()
 
@@ -98,7 +116,8 @@ picam2 = Picamera2()
 config_main = {"size": (args.width, args.height)}
 # Not entirely sure how configurations work, preview/main etc.
 config = picam2.create_preview_configuration(
-    main=config_main, transform=Transform(hflip=hflip_num))
+    main=config_main, transform=Transform(hflip=hflip_num)
+)
 picam2.configure(config)
 
 controls = {
@@ -107,7 +126,7 @@ controls = {
     "Contrast": args.contrast,
     "ExposureValue": args.exposure,
     "Saturation": args.saturation,
-    "FrameRate": args.fps
+    "FrameRate": args.fps,
 }
 picam2.set_controls(controls)
 
@@ -162,14 +181,13 @@ sock_addr = (args.ip, args.port)
 # Read heartbeat datagrams over UDP
 sock_heartbeat = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Without a timeout, this script will "hang" if nothing is received
-sock_heartbeat.settimeout(60*10)
-sock_heartbeat.bind(("0.0.0.0", args.port+1))  # Register our socket
+sock_heartbeat.settimeout(60 * 10)
+sock_heartbeat.bind(("0.0.0.0", args.port + 1))  # Register our socket
 # https://pymotw.com/2/socket/multicast.html
 if args.ip.startswith("224"):  # join multicast group
     group = socket.inet_aton(args.ip)
-    mreq = struct.pack('4sL', group, socket.INADDR_ANY)
-    sock_heartbeat.setsockopt(
-        socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    mreq = struct.pack("4sL", group, socket.INADDR_ANY)
+    sock_heartbeat.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
 
 def heartbeat_run():
@@ -221,7 +239,9 @@ def blobby(request):
         # https://www.fypsolutions.com/opencv-python/findcontours-opencv-python-drawcontours-opencv-python/
         if args.contours:
             im_gray = cv2.cvtColor(m.array, cv2.COLOR_BGR2GRAY)
-            contours, _hierarchy = cv2.findContours(im_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            contours, _hierarchy = cv2.findContours(
+                im_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+            )
             if len(contours) > 0:
                 contour_biggest = max(contours, key=cv2.contourArea)
                 convex_hull = cv2.convexHull(contour_biggest)
@@ -258,11 +278,7 @@ def blobby(request):
             # If the IR sticker has moved smoothly, but not "jumped"...
             # Jumping can occur if multiple blobs are detected, such as other
             # IR reflective surfaces in the camera's view, like glasses lenses.
-            if (
-                (x_diff**2 > 0 or y_diff**2 > 0)
-                and x_diff**2 < 50
-                and y_diff**2 < 50
-            ):
+            if (x_diff**2 > 0 or y_diff**2 > 0) and x_diff**2 < 50 and y_diff**2 < 50:
                 # Send the (x_diff, y_diff) to the receiving computer.
                 # For performance stats, I'm also sending the time spent on
                 # Raspberry Pi.
@@ -273,11 +289,16 @@ def blobby(request):
                 # PhilNav uses x, y as x_diff, y_diff and moves the mouse
                 # relative to its current position.
                 # https://github.com/opentrack/opentrack/issues/747
-                ms_time_spent = (perf_counter() - phil.frame_perf)*1000
-                msg = struct.pack("dddddd",
-                                  x_diff, y_diff,
-                                  0.0, 0.0,
-                                  phil.frame_started_at, ms_time_spent)
+                ms_time_spent = (perf_counter() - phil.frame_perf) * 1000
+                msg = struct.pack(
+                    "dddddd",
+                    x_diff,
+                    y_diff,
+                    0.0,
+                    0.0,
+                    phil.frame_started_at,
+                    ms_time_spent,
+                )
                 sock.sendto(msg, sock_addr)
 
         # Log once per second
@@ -289,9 +310,11 @@ def blobby(request):
             # display legend every 5 seconds
             if phil.debug_num % 5 == 1:
                 logging.info(
-                    f"{c_time} - {'Frame':>8}, ({'x_diff':>8}, {'y_diff':>8})  , {'FPS':>8}, {'cv ms':>8}, {'btw ms':>8}")
+                    f"{c_time} - {'Frame':>8}, ({'x_diff':>8}, {'y_diff':>8})  , {'FPS':>8}, {'cv ms':>8}, {'btw ms':>8}"
+                )
             logging.info(
-                f"{c_time} - {phil.frame_num:>8}, ({x_diff:> 8.2f}, {y_diff:> 8.2f})  , {int(fps_measured):>8}, {int(ms_measured):>8}, {int(ms_frame_between):>8}")
+                f"{c_time} - {phil.frame_num:>8}, ({x_diff:> 8.2f}, {y_diff:> 8.2f})  , {int(fps_measured):>8}, {int(ms_measured):>8}, {int(ms_frame_between):>8}"
+            )
 
         # Time between capturing frames from the camera.
         phil.frame_between = perf_counter()
@@ -307,7 +330,7 @@ if args.timeout == 0:
 try:
     t = args.timeout
     if t == 0:
-        t = 60*60*24*365
+        t = 60 * 60 * 24 * 365
     philnav_start()
     sleep(t)  # turn off after a year
 except KeyboardInterrupt:
