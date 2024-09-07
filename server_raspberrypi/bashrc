@@ -1,7 +1,7 @@
 # `cat bashrc >> ~/.bashrc`
 #
 # with `crontab -e`, add:
-# @reboot nohup python3 /home/philnav/philnav/server_raspberrypi/main.py &
+# @reboot sh -c 'sleep 30 && nohup python3 /home/philip/PhilNav/server_raspberrypi/main.py &'
 
 if test "$(ps aux | grep -i '[P]hilNav')"; then
   echo
@@ -15,5 +15,5 @@ echo "pkill -f PhilNav"
 
 echo
 echo "Run PhilNav with (optionally with '--preview' to see camera view):"
-echo "nohup python3 /home/philnav/philnav/server_raspberrypi/main.py --blob-size 7 --gain 3.0 &"
+echo "nohup python3 /home/philip/PhilNav/server_raspberrypi/main.py &"
 echo
