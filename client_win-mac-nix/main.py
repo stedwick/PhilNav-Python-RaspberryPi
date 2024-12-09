@@ -21,7 +21,7 @@ match platform.system():
         from hotkey_win_mac import hotkey_run
     case "Linux":
         from mouse_nix_wayland import getCursorPos, setCursorPos
-        from hotkey_nix_x11 import hotkey_run
+        from hotkey_nix_wayland import hotkey_run
     case _:
         raise RuntimeError(
             f"Platform {platform.system()} not supported (not Win, Mac, or Nix)")

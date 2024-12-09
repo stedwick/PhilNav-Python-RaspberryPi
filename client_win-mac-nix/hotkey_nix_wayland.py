@@ -1,7 +1,7 @@
-# This works, but takes 5% CPU and spins up the fans. Need to optimize the loop.
 from evdev import InputDevice, categorize, ecodes
 from time import time
 import glob
+import select
 
 # Key codes
 F7_KEYCODE = 65
@@ -32,17 +32,24 @@ def hotkey_run(callback=None):
     # Track shift key state for each device
     shift_pressed = {dev.fd: False for dev in keyboards}
     
+    # Create a dictionary mapping file descriptors to devices
+    devices = {dev.fd: dev for dev in keyboards}
+    
     while True:
-        for device in keyboards:
+        # Wait for events on any keyboard device
+        r, w, x = select.select(devices, [], [], 1.0)  # 1 second timeout
+        
+        for fd in r:
+            device = devices[fd]
             try:
                 for event in device.read():
                     if event.type == ecodes.EV_KEY:
                         # Update shift state
                         if event.code in (SHIFT_KEYCODE, SHIFT_KEYCODE_RIGHT):
-                            shift_pressed[device.fd] = (event.value == 1 or event.value == 2)
+                            shift_pressed[fd] = (event.value == 1 or event.value == 2)
                         
                         # Check for F7 press while shift is held
-                        if event.code == F7_KEYCODE and event.value == 1 and shift_pressed[device.fd]:
+                        if event.code == F7_KEYCODE and event.value == 1 and shift_pressed[fd]:
                             now = time()
                             if now - hotkey_time > 0.25:
                                 hotkey_time = now
@@ -50,3 +57,14 @@ def hotkey_run(callback=None):
                                     callback()
             except BlockingIOError:
                 continue
+
+# # CPU Fix Prompt: This works, but takes 5% CPU and spins up the fans. Need to optimize the loop.
+
+# Ah yes, the busy-waiting loop is inefficient. We can optimize this using select() to wait for events instead of continuously polling. Here's the optimized version:
+
+# # Key changes:
+# Added select.select() to efficiently wait for events instead of busy-waiting
+# Added a 1-second timeout to the select call to prevent complete blocking
+# Created a devices dictionary mapping file descriptors to devices for easier lookup
+# Only process events when select indicates data is available
+# This should dramatically reduce CPU usage as the process will sleep while waiting for keyboard events instead of continuously checking for them. The CPU usage should now be close to 0% when idle.
