@@ -1,22 +1,23 @@
 from evdev import UInput, ecodes as e
-import time
 
 # Define capabilities for our virtual mouse
 cap = {
     e.EV_REL: [e.REL_X, e.REL_Y],  # Relative positioning
-    e.EV_KEY: [e.BTN_LEFT, e.BTN_RIGHT, e.BTN_MIDDLE],  # Mouse buttons
+    e.EV_KEY: [e.BTN_LEFT, e.BTN_RIGHT, e.BTN_MIDDLE],  # Mouse buttons, required to be a mouse
 }
 
 # Create a uinput device
-device = UInput(cap, name='virtual-mouse', version=0x3)
+device = UInput(cap, name='pynav-virtual-mouse')
 
 # We need to track the current position ourselves
 current_x = 0
 current_y = 0
 
 def getCursorPos():
-    # Note: we can't actually read the cursor position
-    # We return our tracked position, but it might get out of sync with reality
+    # Note: we can't actually read the cursor position. We return our tracked
+    # position, but it might get out of sync with reality. This doesn't matter;
+    # we are moving the mouse relatively anyhow. Back on X11 it was absolute,
+    # that's why this may seem silly. But we don't have to modify main.py.
     global current_x, current_y
     return current_x, current_y
 
@@ -35,8 +36,27 @@ def setCursorPos(x, y):
     device.write(e.EV_REL, e.REL_X, dx)
     device.write(e.EV_REL, e.REL_Y, dy)
     device.syn()  # Synchronize state
-    time.sleep(0.01)  # Small sleep to ensure events are processed
 
+# Updated Prompt: Switch it to using evdev @https://python-evdev.readthedocs.io/en/latest/tutorial.html#specifying-uinput-device-options 
+
+# Key changes from the previous version:
+# Using evdev instead of uinput
+# Added mouse button capabilities (which might be useful later)
+# Using device.syn() instead of separate sleeps
+# More descriptive device name
+# To use this, you'll need to:
+# Install evdev:
+# pip install evdev
+# Add your user to the input group:
+# Make sure you have the required permissions for /dev/uinput:
+# The evdev implementation should be more reliable than the pure uinput one, as it's the standard way to handle input devices on modern Linux systems.
+# # Add user to input group
+# sudo usermod -a -G input $USER
+# # Create a udev rule
+# echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-input.rules
+# # Reload udev rules
+# sudo udevadm control --reload-rules
+# sudo udevadm trigger
 
 # Prompt: I'm making a virtual mouse in Python, and I have implementations for Windows, Mac, and Linux X11, see attached files. Linux is moving to Wayland which doesn't support X11 protocols to move the mouse, so I want to write an implementation using python-uinput. See https://pypi.org/project/python-uinput/ and https://github.com/pyinput/python-uinput.
 
