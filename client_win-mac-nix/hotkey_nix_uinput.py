@@ -1,4 +1,4 @@
-from evdev import InputDevice, categorize, ecodes
+from evdev import InputDevice, ecodes
 from time import time
 import glob
 import select
