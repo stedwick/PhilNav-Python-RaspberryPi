@@ -1,21 +1,21 @@
-import uinput
+from evdev import UInput, ecodes as e
 import time
 
-# Define the events we'll need
-events = [
-    uinput.REL_X,
-    uinput.REL_Y,
-]
+# Define capabilities for our virtual mouse
+cap = {
+    e.EV_REL: [e.REL_X, e.REL_Y],  # Relative positioning
+    e.EV_KEY: [e.BTN_LEFT, e.BTN_RIGHT, e.BTN_MIDDLE],  # Mouse buttons
+}
 
 # Create a uinput device
-device = uinput.Device(events)
+device = UInput(cap, name='virtual-mouse', version=0x3)
 
-# We need to track the current position ourselves since uinput works with relative movements
+# We need to track the current position ourselves
 current_x = 0
 current_y = 0
 
 def getCursorPos():
-    # Note: uinput can't actually read the cursor position
+    # Note: we can't actually read the cursor position
     # We return our tracked position, but it might get out of sync with reality
     global current_x, current_y
     return current_x, current_y
@@ -32,10 +32,10 @@ def setCursorPos(x, y):
     current_y = y
     
     # Move the cursor
-    device.emit(uinput.REL_X, dx)
-    device.emit(uinput.REL_Y, dy)
-    # Small sleep to ensure events are processed
-    time.sleep(0.01)
+    device.write(e.EV_REL, e.REL_X, dx)
+    device.write(e.EV_REL, e.REL_Y, dy)
+    device.syn()  # Synchronize state
+    time.sleep(0.01)  # Small sleep to ensure events are processed
 
 
 # Prompt: I'm making a virtual mouse in Python, and I have implementations for Windows, Mac, and Linux X11, see attached files. Linux is moving to Wayland which doesn't support X11 protocols to move the mouse, so I want to write an implementation using python-uinput. See https://pypi.org/project/python-uinput/ and https://github.com/pyinput/python-uinput.
