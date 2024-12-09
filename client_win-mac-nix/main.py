@@ -20,8 +20,8 @@ match platform.system():
         from mouse_win import getCursorPos, setCursorPos
         from hotkey_win_mac import hotkey_run
     case "Linux":
-        from mouse_nix_wayland import getCursorPos, setCursorPos
-        from hotkey_nix_wayland import hotkey_run
+        from mouse_nix_uinput import getCursorPos, setCursorPos
+        from hotkey_nix_uinput import hotkey_run
     case _:
         raise RuntimeError(
             f"Platform {platform.system()} not supported (not Win, Mac, or Nix)")
