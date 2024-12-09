@@ -1,3 +1,4 @@
+# This works, but takes 5% CPU and spins up the fans. Need to optimize the loop.
 from evdev import InputDevice, categorize, ecodes
 from time import time
 import glob
