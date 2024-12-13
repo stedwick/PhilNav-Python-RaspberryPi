@@ -84,16 +84,13 @@ python3 client_win-mac-nix/main.py --speed 21 --smooth 3 --deadzone 0.04 --keepa
 #### Note: Linux using `/dev/uinput` (with Wayland & X11)
 I've modernized it to send mouse movements to /dev/uinput instead of X11 calls, so it works on Wayland (& X11) and should be future-proof. However, this requires permission to read and write /dev/uinput. You can run as root, or give your user permission:
 
-You'll need to install ```pip install evdev``` and add your user to the input group.
+You'll need to install ```pip install evdev``` or ```sudo apt install python3-evdev``` and add your user to the input group.
 
 ```
 # Add user to input group
 sudo usermod -a -G input $USER
 # Create a udev rule
 echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-input.rules
-# Reload udev rules
-sudo udevadm control --reload-rules
-sudo udevadm trigger
 # restart
 sudo shutdown -r now
 ```
