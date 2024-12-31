@@ -239,13 +239,14 @@ def blobby(request):
         # https://www.fypsolutions.com/opencv-python/findcontours-opencv-python-drawcontours-opencv-python/
         if args.contours:
             im_gray = cv2.cvtColor(m.array, cv2.COLOR_BGR2GRAY)
+            _ret, thresh = cv2.threshold(im_gray, args.blob_min_threshold, 255, 0)
             contours, _hierarchy = cv2.findContours(
-                im_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+                thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
             )
             if len(contours) > 0:
                 contour_biggest = max(contours, key=cv2.contourArea)
                 convex_hull = cv2.convexHull(contour_biggest)
-                hull_scaled = scale_contour(convex_hull, 0.5)
+                hull_scaled = scale_contour(convex_hull, 0.7)
                 if hull_scaled is not None:
                     cv2.drawContours(
                         m.array, [hull_scaled], -1, (255, 255, 255), cv2.FILLED
