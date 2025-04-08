@@ -48,6 +48,9 @@ parser.add_argument(
     "-w", "--keepawake", type=int, default=0, help="Keep PC awake by randomly moving the mouse a few pixels every N seconds, default off"
 )
 parser.add_argument(
+    "-m", "--multiplier", type=float, default=3.0, help="Speed multiplier value when enabled with Shift-F8, default 3.0"
+)
+parser.add_argument(
     "--port", type=int, default=4245, help="bind to port, default 4245. Heartbeats use port+1 (4246). If you have a firewall, these ports must be open to send/recv UDP."
 )
 parser.add_argument(
@@ -72,6 +75,8 @@ if args.verbose:
 
 # Hotkey to pause/resume moving the mouse
 enabled = True
+# Speed multiplier toggle
+multiplier_enabled = False
 
 
 def toggle():
@@ -79,7 +84,17 @@ def toggle():
     enabled = not enabled
     logging.info("Toggled PhilNav on/off\n")
 
-hotkey_thread = Thread(target=hotkey_run, kwargs={"callback": toggle}, daemon=True)
+
+def toggle_multiplier():
+    global multiplier_enabled
+    multiplier_enabled = not multiplier_enabled
+    logging.info(f"Speed multiplier ({args.multiplier}x) {'enabled' if multiplier_enabled else 'disabled'}\n")
+
+
+hotkey_thread = Thread(target=hotkey_run, kwargs={
+    "callback": toggle, 
+    "multiplier_callback": toggle_multiplier
+}, daemon=True)
 hotkey_thread.start()
 
 
@@ -109,7 +124,7 @@ text_listening = (
     f"Listening on {args.client_ip} for mouse data from Raspberry Pi server..."
 )
 print(ctime() + " - " + text_listening)
-print("\nPress Ctrl-C to exit, press Shift-F7 to pause/resume\n")
+print(f"\nPress Ctrl-C to exit, press Shift-F7 to pause/resume, Shift-F8 to toggle {args.multiplier}x speed multiplier\n")
 
 
 # Stats for debugging & performance. The goal is 60 frames per second, or
@@ -229,8 +244,12 @@ while True:
         # I'm moving the Y axis slightly faster because looking left and right
         # is easier than nodding up and down. Also, monitors are wider than they
         # are tall.
-        x_new = round(x_cur + x_smooth * args.speed)
-        y_new = round(y_cur + y_smooth * args.speed * 1.25)
+        
+        # Apply speed multiplier if enabled
+        multiplier = args.multiplier if multiplier_enabled else 1.0
+        
+        x_new = round(x_cur + x_smooth * args.speed * multiplier)
+        y_new = round(y_cur + y_smooth * args.speed * 1.25 * multiplier)
         setCursorPos(x_new, y_new)  # move mouse cursor
         phil.time_last_moved = time()
 

@@ -5,10 +5,12 @@ import select
 
 # Key codes
 F7_KEYCODE = 65
+F8_KEYCODE = 66
 SHIFT_KEYCODE = 42  # Left shift
 SHIFT_KEYCODE_RIGHT = 54  # Right shift
 
-hotkey_time = time()
+hotkey_time_f7 = time()
+hotkey_time_f8 = time()
 
 def find_keyboards():
     """Find all keyboard devices"""
@@ -22,8 +24,8 @@ def find_keyboards():
             continue
     return keyboards
 
-def hotkey_run(callback=None):
-    global hotkey_time
+def hotkey_run(callback=None, multiplier_callback=None):
+    global hotkey_time_f7, hotkey_time_f8
     
     keyboards = find_keyboards()
     if not keyboards:
@@ -51,10 +53,16 @@ def hotkey_run(callback=None):
                         # Check for F7 press while shift is held
                         if event.code == F7_KEYCODE and event.value == 1 and shift_pressed[fd]:
                             now = time()
-                            if now - hotkey_time > 0.25:
-                                hotkey_time = now
-                                if callback:
-                                    callback()
+                            if now - hotkey_time_f7 > 0.25:
+                                hotkey_time_f7 = now
+                                callback()
+                        
+                        # Check for F8 press while shift is held
+                        if event.code == F8_KEYCODE and event.value == 1 and shift_pressed[fd]:
+                            now = time()
+                            if now - hotkey_time_f8 > 0.25:
+                                hotkey_time_f8 = now
+                                multiplier_callback()
             except BlockingIOError:
                 continue
 
