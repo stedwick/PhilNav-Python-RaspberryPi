@@ -62,6 +62,9 @@ parser.add_argument(
 parser.add_argument(
     "--server-ip", type=str, default="224.3.0.186", help="ip address to send heartbeats to (will wake server), default 224.3.0.186 (udp multicast group). Direct udp requires the server's ip for heartbeats, or disable heartbeats on the server."
 )
+parser.add_argument(
+    "--rotate", type=float, default=0, help="rotate mouse movements by N degrees (e.g., 90 for camera on its side), default 0"
+)
 
 args = parser.parse_args()
 
@@ -72,6 +75,10 @@ if args.verbose:
     logging.getLogger().setLevel(logging.DEBUG)
     logging.info("Logging verbosely\n")
 
+# Pre-calculate rotation values if rotation is specified
+rotation_rad = math.radians(args.rotate) if args.rotate != 0 else 0
+cos_rot = math.cos(rotation_rad) if rotation_rad else 1
+sin_rot = math.sin(rotation_rad) if rotation_rad else 0
 
 # Hotkey to pause/resume moving the mouse
 enabled = True
@@ -210,6 +217,13 @@ while True:
         #  x_diff, y_diff, n/a, n/a, camera capture time, OpenCV processing time
         x_diff, y_diff, a, b, time_cam, ms_opencv = struct.unpack(
             "dddddd", data)
+
+        # Apply rotation if specified
+        if rotation_rad:
+            x_rotated = x_diff * cos_rot - y_diff * sin_rot
+            y_rotated = x_diff * sin_rot + y_diff * cos_rot
+            x_diff = x_rotated
+            y_diff = y_rotated
 
         # store recent mouse movements
         phil.x_q.append(x_diff)
