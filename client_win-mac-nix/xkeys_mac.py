@@ -74,6 +74,15 @@ class XKeysPedal:
             # Silently keep current cached state if device read fails
             pass
 
+    def _update_all_states(self):
+        """Update cached states for all devices if cache has expired."""
+        current_time = time.time()
+
+        for device_entry in self.devices:
+            if current_time - device_entry[3] >= self._cache_duration:
+                self._update_state(device_entry)
+                device_entry[3] = current_time
+
     def is_middle_key_pressed(self):
         """
         Check if the middle key is pressed on ANY connected pedal.
@@ -84,15 +93,7 @@ class XKeysPedal:
         Returns:
             bool: True if middle key is pressed on any device, False otherwise
         """
-        current_time = time.time()
-
-        # Update cache for all devices if sufficient time has elapsed
-        for device_entry in self.devices:
-            if current_time - device_entry[3] >= self._cache_duration:
-                self._update_state(device_entry)
-                device_entry[3] = current_time
-
-        # Return True if ANY device has the middle key pressed
+        self._update_all_states()
         return any(device_entry[2] for device_entry in self.devices)
 
     def get_all_states(self):
@@ -102,14 +103,7 @@ class XKeysPedal:
         Returns:
             list: List of tuples (product_id, is_pressed) for each device
         """
-        current_time = time.time()
-
-        # Update cache for all devices if sufficient time has elapsed
-        for device_entry in self.devices:
-            if current_time - device_entry[3] >= self._cache_duration:
-                self._update_state(device_entry)
-                device_entry[3] = current_time
-
+        self._update_all_states()
         return [(device_entry[1], device_entry[2]) for device_entry in self.devices]
 
     def close(self):
