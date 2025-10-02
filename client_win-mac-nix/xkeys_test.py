@@ -33,7 +33,7 @@ def main():
                 print(f"[{timestamp}] Middle key: {status}")
                 last_state = current_state
 
-            time.sleep(0.1)  # 10ms polling
+            time.sleep(0.1)  # 100ms polling
 
     except KeyboardInterrupt:
         print("\n\nExiting...")

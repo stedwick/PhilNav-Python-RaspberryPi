@@ -23,7 +23,7 @@ class XKeysPedal:
     def __init__(self):
         # List of [device, product_id, current_state, last_data, last_check_time]
         self.devices = []
-        self._cache_duration = 0.01  # 10ms cache duration for responsiveness
+        self._cache_duration = 0.1  # 100ms cache duration for responsiveness
         self._connect()
 
     def _connect(self):
