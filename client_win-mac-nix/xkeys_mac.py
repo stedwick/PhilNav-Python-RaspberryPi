@@ -5,6 +5,7 @@ Detects button presses from X-keys USB HID devices.
 
 import hid
 import logging
+import time
 
 # X-keys vendor ID (PI Engineering)
 XKEYS_VENDOR_ID = 0x05F3
@@ -21,6 +22,9 @@ class XKeysPedal:
 
     def __init__(self):
         self.device = None
+        self._cached_state = False
+        self._last_check_time = 0
+        self._cache_duration = 0.1  # 100ms cache duration
         self._connect()
 
     def _connect(self):
@@ -46,33 +50,42 @@ class XKeysPedal:
         """
         return self.device is not None
 
-    def is_middle_key_pressed(self):
-        """
-        Check if the middle key of the foot pedal is currently pressed.
-
-        Returns:
-            bool: True if middle key is pressed, False otherwise
-        """
+    def _update_state(self):
+        """Update the cached button state by reading from device."""
         if not self.device:
-            return False
+            return
 
         try:
             # Read data from device (non-blocking)
             data = self.device.read(64)
-            if not data or len(data) < 3:
-                return False
-
-            # Pi3 Matrix Board format:
-            # Byte 0: Report ID (0x01)
-            # Byte 1: Always 0x01
-            # Byte 2: Button state (0x04 = middle key pressed, 0x00 = released)
-            button_state = data[2]
-            middle_key_pressed = bool(button_state & 0x04)
-
-            return middle_key_pressed
+            if data and len(data) >= 3:
+                # Pi3 Matrix Board format:
+                # Byte 0: Report ID (0x01)
+                # Byte 1: Always 0x01
+                # Byte 2: Button state (0x04 = middle key pressed, 0x00 = released)
+                self._cached_state = bool(data[2] & 0x04)
         except (IOError, OSError, ValueError):
-            # Silently return False if device is not available
-            return False
+            # Silently keep current cached state if device read fails
+            pass
+
+    def is_middle_key_pressed(self):
+        """
+        Check if the middle key of the foot pedal is currently pressed.
+
+        Uses a 100ms cache to avoid blocking reads. Returns cached state
+        immediately and updates cache if 100ms has elapsed.
+
+        Returns:
+            bool: True if middle key is pressed, False otherwise
+        """
+        current_time = time.time()
+
+        # Update cache if sufficient time has elapsed
+        if current_time - self._last_check_time >= self._cache_duration:
+            self._update_state()
+            self._last_check_time = current_time
+
+        return self._cached_state
 
     def close(self):
         """Close the device connection."""
