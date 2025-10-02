@@ -20,22 +20,32 @@ def main():
         print("ERROR: No X-keys device found. Make sure it's connected.")
         sys.exit(1)
 
-    last_state = None
-    last_data = None
+    print(f"Connected to {len(pedal.devices)} device(s)\n")
+
+    # Track last state for each device separately
+    last_states = {}  # device_index -> (last_state, last_data)
 
     try:
         while True:
-            # Read raw data once and process it
-            if pedal.device:
+            # Read raw data from each device
+            for idx, device_entry in enumerate(pedal.devices):
+                device = device_entry[0]
+                product_id = device_entry[1]
+
                 try:
-                    data = pedal.device.read(64)  # Read up to 64 bytes
+                    data = device.read(64)  # Read up to 64 bytes
                     if data:
+                        # Get last state for this device
+                        if idx not in last_states:
+                            last_states[idx] = (None, None)
+                        last_state, last_data = last_states[idx]
+
                         if data != last_data:
                             timestamp = time.strftime("%H:%M:%S")
                             # Display raw data in hex
                             hex_data = ' '.join([f'{b:02x}' for b in data[:16]])  # First 16 bytes
-                            print(f"[{timestamp}] Raw data: {hex_data}")
-                            last_data = data
+                            print(f"[{timestamp}] Device {idx} (PID: {hex(product_id)}): {hex_data}")
+                            last_states[idx] = (last_state, data)
 
                         # Check button state from the data we just read
                         if len(data) >= 3:
@@ -44,8 +54,8 @@ def main():
                             if current_state != last_state:
                                 timestamp = time.strftime("%H:%M:%S")
                                 status = "PRESSED" if current_state else "RELEASED"
-                                print(f"[{timestamp}] Middle key: {status}")
-                                last_state = current_state
+                                print(f"[{timestamp}] Device {idx} (PID: {hex(product_id)}) Middle key: {status}")
+                                last_states[idx] = (current_state, data)
                 except:
                     pass
 

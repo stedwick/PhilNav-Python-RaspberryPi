@@ -18,77 +18,105 @@ XKEYS_PRODUCT_IDS = [
 
 
 class XKeysPedal:
-    """Interface for X-keys foot pedal."""
+    """Interface for X-keys foot pedal(s). Supports multiple devices."""
 
     def __init__(self):
-        self.device = None
-        self._cached_state = False
-        self._last_check_time = 0
+        self.devices = []  # List of (device, product_id, cached_state, last_check_time)
         self._cache_duration = 0.1  # 100ms cache duration
         self._connect()
 
     def _connect(self):
-        """Connect to the X-keys device."""
-        for product_id in XKEYS_PRODUCT_IDS:
-            try:
-                self.device = hid.device()
-                self.device.open(XKEYS_VENDOR_ID, product_id)
-                self.device.set_nonblocking(1)
-                logging.info(f"Connected to X-keys device (PID: {hex(product_id)})")
-                return
-            except (IOError, OSError):
-                continue
+        """Connect to all available X-keys devices."""
+        # Enumerate all devices to find multiple instances
+        for device_info in hid.enumerate(XKEYS_VENDOR_ID):
+            product_id = device_info['product_id']
+            if product_id in XKEYS_PRODUCT_IDS:
+                try:
+                    device = hid.device()
+                    # Path is already bytes, use it directly
+                    device.open_path(device_info['path'])
+                    device.set_nonblocking(1)
+                    # Initialize: (device, product_id, cached_state, last_check_time)
+                    self.devices.append([device, product_id, False, 0])
+                    # Decode path for logging if it's bytes
+                    path_str = device_info['path'].decode('utf-8') if isinstance(device_info['path'], bytes) else device_info['path']
+                    logging.info(f"Connected to X-keys device (PID: {hex(product_id)}, Path: {path_str})")
+                except (IOError, OSError):
+                    # Silently ignore devices we can't connect to
+                    continue
 
-        logging.warning("No X-keys foot pedal found")
+        if not self.devices:
+            logging.warning("No X-keys foot pedal found")
 
     def is_connected(self):
         """
-        Check if device is connected.
+        Check if any device is connected.
 
         Returns:
-            bool: True if device is connected, False otherwise
+            bool: True if at least one device is connected, False otherwise
         """
-        return self.device is not None
+        return len(self.devices) > 0
 
-    def _update_state(self):
-        """Update the cached button state by reading from device."""
-        if not self.device:
-            return
+    def _update_state(self, device_entry):
+        """Update the cached button state for a specific device."""
+        device = device_entry[0]
 
         try:
             # Read data from device (non-blocking)
-            data = self.device.read(64)
+            data = device.read(64)
             if data and len(data) >= 3:
                 # Pi3 Matrix Board format:
                 # Byte 0: Report ID (0x01)
                 # Byte 1: Always 0x01
                 # Byte 2: Button state (0x04 = middle key pressed, 0x00 = released)
-                self._cached_state = bool(data[2] & 0x04)
+                device_entry[2] = bool(data[2] & 0x04)
         except (IOError, OSError, ValueError):
             # Silently keep current cached state if device read fails
             pass
 
     def is_middle_key_pressed(self):
         """
-        Check if the middle key of the foot pedal is currently pressed.
+        Check if the middle key is pressed on ANY connected pedal.
 
         Uses a 100ms cache to avoid blocking reads. Returns cached state
         immediately and updates cache if 100ms has elapsed.
 
         Returns:
-            bool: True if middle key is pressed, False otherwise
+            bool: True if middle key is pressed on any device, False otherwise
         """
         current_time = time.time()
 
-        # Update cache if sufficient time has elapsed
-        if current_time - self._last_check_time >= self._cache_duration:
-            self._update_state()
-            self._last_check_time = current_time
+        # Update cache for all devices if sufficient time has elapsed
+        for device_entry in self.devices:
+            if current_time - device_entry[3] >= self._cache_duration:
+                self._update_state(device_entry)
+                device_entry[3] = current_time
 
-        return self._cached_state
+        # Return True if ANY device has the middle key pressed
+        return any(device_entry[2] for device_entry in self.devices)
+
+    def get_all_states(self):
+        """
+        Get the current state of all connected devices.
+
+        Returns:
+            list: List of tuples (product_id, is_pressed) for each device
+        """
+        current_time = time.time()
+
+        # Update cache for all devices if sufficient time has elapsed
+        for device_entry in self.devices:
+            if current_time - device_entry[3] >= self._cache_duration:
+                self._update_state(device_entry)
+                device_entry[3] = current_time
+
+        return [(device_entry[1], device_entry[2]) for device_entry in self.devices]
 
     def close(self):
-        """Close the device connection."""
-        if self.device:
-            self.device.close()
-            self.device = None
+        """Close all device connections."""
+        for device_entry in self.devices:
+            try:
+                device_entry[0].close()
+            except:
+                pass
+        self.devices = []
