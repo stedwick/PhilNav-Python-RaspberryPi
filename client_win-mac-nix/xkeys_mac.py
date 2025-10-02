@@ -9,10 +9,10 @@ import logging
 # X-keys vendor ID (PI Engineering)
 XKEYS_VENDOR_ID = 0x05F3
 
-# Common X-keys foot pedal product IDs
+# Pi3 Matrix Board product IDs (from hidutil list)
 XKEYS_PRODUCT_IDS = [
-    0x0050,  # XK-3
-    0x00A5,  # XK-3 Switch Interface
+    0x042C,  # Pi3 Matrix Board
+    0x0438,  # Pi3 Matrix Board (alternate interface)
 ]
 
 
@@ -58,16 +58,16 @@ class XKeysPedal:
 
         try:
             # Read data from device (non-blocking)
-            data = self.device.read(8)
-            if not data:
+            data = self.device.read(64)
+            if not data or len(data) < 3:
                 return False
 
-            # X-keys reports button states in the data packet
-            # Byte 0 is report ID, byte 1 typically contains button states
-            # For XK-3, buttons are in bits 0-2 of byte 1
-            # Middle button is typically bit 1
-            button_state = data[1] if len(data) > 1 else 0
-            middle_key_pressed = bool(button_state & 0x02)
+            # Pi3 Matrix Board format:
+            # Byte 0: Report ID (0x01)
+            # Byte 1: Always 0x01
+            # Byte 2: Button state (0x04 = middle key pressed, 0x00 = released)
+            button_state = data[2]
+            middle_key_pressed = bool(button_state & 0x04)
 
             return middle_key_pressed
         except (IOError, OSError, ValueError):
