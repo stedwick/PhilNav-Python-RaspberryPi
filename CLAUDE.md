@@ -130,6 +130,8 @@ pyright
 
 Configuration is in `pyrightconfig.json` with platform-specific file exclusions and stub path configuration.
 
+**IMPORTANT**: Always run `pyright` after making any code changes to ensure type correctness. The project maintains zero errors and zero warnings across all platforms.
+
 ## Important Configuration Parameters
 
 ### Client

@@ -1,0 +1,71 @@
+# Cursor IDE Rules for pi-nav
+
+## Project Overview
+
+PhilNav is a cross-platform head-tracking mouse system with client-server architecture:
+
+- **Server**: Raspberry Pi with camera for IR blob detection
+- **Client**: Windows/Mac/Linux desktop for mouse control
+- **Communication**: UDP multicast protocol
+
+## Critical Development Rules
+
+### Type Checking (MANDATORY)
+
+**ALWAYS run `pyright` after any code changes.** This project maintains zero errors and zero warnings across all platforms.
+
+```bash
+# Check entire project
+pyright
+
+# Check with statistics
+pyright --stats
+
+# Check specific directories
+pyright client_win-mac-nix/
+pyright server_raspberrypi/
+```
+
+The project uses comprehensive type stubs in `stubs/` directory for cross-platform development.
+
+### Code Quality Standards
+
+- Follow PEP 8 with 4-space indentation
+- Use explicit function names (`send_udp_packet`, not `sendPkt`)
+- Platform-specific modules: `mouse_<platform>.py`, `hotkey_<platform>.py`
+- Module constants: UPPERCASE
+- Runtime flags: lowercase_with_underscores
+
+### Project Structure
+
+- `client_win-mac-nix/`: Cross-platform client code
+- `server_raspberrypi/`: Pi-specific server code
+- `stubs/`: Type stubs for platform-specific libraries
+- Use `CLAUDE.md` for extended documentation
+
+### Testing & Validation
+
+- Test on multiple platforms when possible
+- Use `--verbose` flags for debugging
+- Capture logs for manual verification
+- Document platform coverage in PRs
+
+### Development Commands
+
+```bash
+# Server (Pi)
+python3 server_raspberrypi/main.py --verbose --preview
+
+# Client (Desktop)
+python3 client_win-mac-nix/main.py --verbose --speed 21 --smooth 3
+
+# Virtual environment
+source .venv/bin/activate
+```
+
+## Deployment Notes
+
+- Default UDP ports: 4245/4246
+- Document permission changes (uinput, etc.)
+- Update `server_raspberrypi/bashrc` for Pi packages
+- Coordinate port changes with downstream clients
