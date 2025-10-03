@@ -118,6 +118,23 @@ sudo shutdown -r now
 
 The client automatically detects the platform and loads appropriate mouse/hotkey modules using Python's `platform.system()` and match/case statements.
 
+### Type Checking with Pyright
+
+The project includes comprehensive type checking support:
+
+```bash
+# Install Pyright (if not already installed)
+pip install pyright
+
+# Check entire project
+pyright
+
+**Cross-Platform Type Checking**: The server code includes conditional imports and type stubs in the `stubs/` directory that allow full type checking even on non-Pi development machines:
+
+Configuration is in `pyrightconfig.json` with platform-specific file exclusions and stub path configuration.
+
+**IMPORTANT**: Always run `pyright` after making any code changes to ensure type correctness. The project maintains zero errors and zero warnings across all platforms.
+
 ## Important Configuration Parameters
 
 ### Client
@@ -135,3 +152,4 @@ The client automatically detects the platform and loads appropriate mouse/hotkey
 - `--blob-min-threshold`: Brightness threshold for blob detection (default 200)
 - `--contours`: Enable contour tracking for better detection with dull stickers
 - Camera controls: `--gain`, `--brightness`, `--contrast`, `--exposure`
+```

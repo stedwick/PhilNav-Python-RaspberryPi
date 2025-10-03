@@ -1,4 +1,7 @@
-from evdev import InputDevice, ecodes
+try:
+    from evdev import InputDevice, ecodes  # type: ignore[import-untyped]
+except ImportError:
+    from stubs.evdev_stubs import InputDevice, ecodes  # type: ignore[import-not-found]
 from time import time
 import glob
 import select
@@ -55,14 +58,14 @@ def hotkey_run(callback=None, multiplier_callback=None):
                             now = time()
                             if now - hotkey_time_f7 > 0.25:
                                 hotkey_time_f7 = now
-                                callback()
+                                callback()  # type: ignore[misc]
                         
                         # Check for F8 press while shift is held
                         if event.code == F8_KEYCODE and event.value == 1 and shift_pressed[fd]:
                             now = time()
                             if now - hotkey_time_f8 > 0.25:
                                 hotkey_time_f8 = now
-                                multiplier_callback()
+                                multiplier_callback()  # type: ignore[misc]
             except BlockingIOError:
                 continue
 

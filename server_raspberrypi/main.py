@@ -5,8 +5,14 @@ from dataclasses import dataclass
 from threading import Thread
 import socket  # udp networking
 import struct  # binary packing
-from picamera2 import Picamera2, Preview, MappedArray  # Raspberry Pi camera
-from libcamera import Transform  # taking selfies, so used to mirror image
+try:
+    from picamera2 import Picamera2, Preview, MappedArray  # Raspberry Pi camera  # type: ignore[import-untyped]
+    from libcamera import Transform  # taking selfies, so used to mirror image  # type: ignore[import-untyped]
+except ImportError:
+    # Stubs for type checking on non-Pi systems
+    from stubs.picamera2_stubs import Picamera2, Preview, MappedArray  # type: ignore[import-not-found]
+    from stubs.libcamera_stubs import Transform  # type: ignore[import-not-found]
+
 import cv2  # OpenCV, for blob detection
 from scale_contour import scale_contour
 
@@ -132,7 +138,7 @@ picam2.set_controls(controls)
 
 
 # OpenCV blob detection config
-params = cv2.SimpleBlobDetector_Params()
+params = cv2.SimpleBlobDetector_Params()  # type: ignore[attr-defined]
 params.filterByArea = True
 params.minArea = args.blob_size
 params.filterByColor = True
@@ -145,7 +151,7 @@ params.minDistBetweenBlobs = 100
 params.filterByCircularity = False
 params.filterByConvexity = False
 params.filterByInertia = False
-detector = cv2.SimpleBlobDetector_create(params)
+detector = cv2.SimpleBlobDetector_create(params)  # type: ignore[attr-defined]
 
 
 def philnav_start():

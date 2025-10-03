@@ -20,9 +20,15 @@ match platform.system():
     case "Windows":
         from mouse_win import getCursorPos, setCursorPos
         from hotkey_win_mac import hotkey_run
+        # Define dummy functions for Windows
+        def xkeys_run(*args, **kwargs): pass
+        def xkeys_devices(): return []
     case "Linux":
         from mouse_nix_uinput import getCursorPos, setCursorPos
         from hotkey_nix_uinput import hotkey_run
+        # Define dummy functions for Linux
+        def xkeys_run(*args, **kwargs): pass
+        def xkeys_devices(): return []
     case _:
         raise RuntimeError(
             f"Platform {platform.system()} not supported (not Win, Mac, or Nix)")
@@ -176,13 +182,13 @@ class phil:
     time_heartbeat = now
     debug_num = 0
     x_q = deque([], args.smooth)
-    x_q_smooth = 0
+    x_q_smooth: float = 0.0
     x_q_long = deque([], smooth_long)
-    x_q_long_smooth = 0
+    x_q_long_smooth: float = 0.0
     y_q = deque([], args.smooth)
-    y_q_smooth = 0
+    y_q_smooth: float = 0.0
     y_q_long = deque([], smooth_long)
-    y_q_long_smooth = 0
+    y_q_long_smooth: float = 0.0
 
 
 # simple moving average to reduce mouse jitter

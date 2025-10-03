@@ -17,6 +17,7 @@
 
 - Follow PEP 8 with 4-space indentation; prefer explicit verbs in function names (`send_udp_packet`, not `sendPkt`).
 - Keep module-level constants uppercase (`DEFAULT_SPEED`), runtime flags lowercase with underscores, and platform-specific modules following the `mouse_<platform>.py` / `hotkey_<platform>.py` pattern.
+- **CRITICAL**: Always run `pyright` after any code changes to ensure type correctness. The project maintains zero errors and zero warnings across all platforms.
 - Run `ruff check .` and `black .` if you introduce them; document new tooling both here and in `CLAUDE.md`.
 
 ## Testing Guidelines

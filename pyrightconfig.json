@@ -1,0 +1,12 @@
+{
+  "include": [
+    "client_win-mac-nix",
+    "server_raspberrypi"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/.venv",
+    "stubs/"
+  ],
+  "extraPaths": ["stubs"]
+}

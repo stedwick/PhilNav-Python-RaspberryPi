@@ -1,4 +1,7 @@
-from evdev import UInput, ecodes as e
+try:
+    from evdev import UInput, ecodes as e  # type: ignore[import-untyped]
+except ImportError:
+    from stubs.evdev_stubs import UInput, ecodes as e  # type: ignore[import-not-found]
 
 # Define capabilities for our virtual mouse
 cap = {
