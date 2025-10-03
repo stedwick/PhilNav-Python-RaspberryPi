@@ -10,6 +10,7 @@
 
 - `python3 server_raspberrypi/main.py --verbose --preview` starts the camera server with on-device preview for tuning thresholds and masks.
 - `python3 client_win-mac-nix/main.py --verbose --speed 21 --smooth 3` launches the desktop client with the defaults Phil ships; tweak flags to validate new features.
+- Use `--x-speed` and `--y-speed` for independent X/Y axis control (default Y is 1.25x faster than X).
 - Activate the virtual environment with `source .venv/bin/activate` when present, then log new dependencies in `requirements.txt` before `pip install -r requirements.txt`.
 
 ## Coding Style & Naming Conventions

@@ -56,6 +56,9 @@ python3 client_win-mac-nix/main.py
 # With common settings
 python3 client_win-mac-nix/main.py --speed 21 --smooth 3 --deadzone 0.04 --verbose
 
+# With independent X/Y axis speeds (X slower, Y faster)
+python3 client_win-mac-nix/main.py --x-speed 15 --y-speed 35 --verbose
+
 # Keep PC awake during 8-hour workday
 python3 client_win-mac-nix/main.py --keepawake 56 --timeout $((60*60*8))
 ```
@@ -137,6 +140,8 @@ Configuration is in `pyrightconfig.json` with platform-specific file exclusions 
 ### Client
 
 - `--speed`: Mouse sensitivity (default 25)
+- `--x-speed`: X-axis speed (overrides --speed for X movements, default uses --speed)
+- `--y-speed`: Y-axis speed (overrides --speed for Y movements, default uses --speed \* 1.25)
 - `--smooth`: Movement averaging to reduce jitter (default 3)
 - `--deadzone`: Minimum movement threshold (default 0.03)
 - `--multiplier`: Speed multiplier when F8 toggled (default 3.0)
