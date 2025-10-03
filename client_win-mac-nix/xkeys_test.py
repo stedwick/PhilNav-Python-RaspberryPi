@@ -1,50 +1,57 @@
 #!/usr/bin/env python3
-"""
-Test script for the event-driven X-keys foot pedal interface.
-Displays real-time button state changes.
-"""
+"""Minimal manual test for the callback-based X-keys helpers."""
 
-import time
-import sys
 import logging
-from xkeys_mac import XKeysPedal
+import sys
+import threading
+import time
 
-def main():
-    """Initializes the pedal and prints state changes."""
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    print("X-keys Foot Pedal Event-Driven Test")
+from xkeys_mac import xkeys_devices, xkeys_run
+
+
+def log_state(is_pressed: bool) -> None:
+    status = "PRESSED" if is_pressed else "RELEASED"
+    logging.info("Middle pedal %s", status)
+
+def main() -> None:
+    """Spin up listener threads for each pedal and log state changes."""
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+
+    print("X-keys Foot Pedal Callback Test")
     print("Press Ctrl-C to exit\n")
 
-    pedal = XKeysPedal()
-
-    if not pedal.is_connected():
+    devices = xkeys_devices()
+    if not devices:
         print("ERROR: No X-keys device found. Make sure it's connected.")
         sys.exit(1)
 
-    print(f"Connected to {len(pedal.device_states)} device(s). Waiting for pedal events...\n")
+    for idx, device in enumerate(devices, start=1):
+        thread = threading.Thread(
+            target=xkeys_run,
+            kwargs={"device": device, "callback": log_state},
+            daemon=True,
+            name=f"xkeys-{idx}",
+        )
+        thread.start()
 
-    last_state = False
+    print(f"Connected to {len(devices)} device(s). Waiting for pedal events...\n")
 
     try:
         while True:
-            # This call now processes any pending events from the queue
-            # and returns the current state.
-            current_state = pedal.is_middle_key_pressed()
-
-            if current_state != last_state:
-                timestamp = time.strftime("%H:%M:%S")
-                status = "PRESSED" if current_state else "RELEASED"
-                print(f"[{timestamp}] Middle key: {status}")
-                last_state = current_state
-
-            # Sleep briefly to prevent the loop from consuming 100% CPU,
-            # while still being highly responsive.
-            time.sleep(0.01) # 10ms
-
+            time.sleep(1)
     except KeyboardInterrupt:
-        print("\n\nExiting...")
+        print("\nExiting...")
     finally:
-        pedal.close()
+        for device in devices:
+            try:
+                device.close()
+            except (IOError, OSError, ValueError):
+                pass
+
 
 if __name__ == "__main__":
     main()
