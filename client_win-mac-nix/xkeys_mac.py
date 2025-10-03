@@ -67,12 +67,9 @@ def xkeys_devices():
             device.open_path(device_info["path"])
             devices.append(device)
 
-            logging.info(
-                "Connected to X-keys device (PID: %s, Path: %s, usage=0x%04x, usage_page=0x%04x)",
-                hex(product_id),
-                device_info["path"],
-                usage,
-                usage_page,
+            print(
+                "Connected to X-keys device (PID: %s, Path: %s, usage=0x%04x, usage_page=0x%04x)"
+                % (hex(product_id), device_info["path"], usage, usage_page)
             )
 
         except (IOError, OSError) as exc:
