@@ -1,13 +1,13 @@
-import Quartz
+import Quartz  # type: ignore[import-untyped]
 
 
 # PhilNav will only move the mouse on the main display. This might not be what you want, but I like it.
-Qcgd_origin, Qcgd_size = Quartz.CGDisplayBounds(0)
+Qcgd_origin, Qcgd_size = Quartz.CGDisplayBounds(0)  # type: ignore[attr-defined]
 
 
 def getCursorPos():
-    blankEvent = Quartz.CGEventCreate(None)
-    x, y = Quartz.CGEventGetLocation(blankEvent)
+    blankEvent = Quartz.CGEventCreate(None)  # type: ignore[attr-defined]
+    x, y = Quartz.CGEventGetLocation(blankEvent)  # type: ignore[attr-defined]
     return x, y
 
 def setCursorPos(x, y):
@@ -27,9 +27,9 @@ def setCursorPos(x, y):
     # https://developer.apple.com/documentation/coregraphics/1454356-cgeventcreatemouseevent
     # CGEventType: case mouseMoved = 5
     # Ignored. CGMouseButton: case left = 0
-    mouseEvent = Quartz.CGEventCreateMouseEvent(None, 5, (x, y), 0)
+    mouseEvent = Quartz.CGEventCreateMouseEvent(None, 5, (x, y), 0)  # type: ignore[attr-defined]
     # CGEventTapLocation: case cghidEventTap = 0
-    Quartz.CGEventPost(0, mouseEvent)
+    Quartz.CGEventPost(0, mouseEvent)  # type: ignore[attr-defined]
 
     # Two other ways of doing the same thing.
     # But these "lock" the physical mouse and don't send events.
