@@ -8,7 +8,11 @@ listener: Optional[keyboard.Listener] = None
 
 def for_canonical(f):
     global listener
-    return lambda k: f(listener.canonical(k)) if listener else None
+    def wrapper(k):
+        if listener:
+            return f(listener.canonical(k))
+        return None
+    return wrapper
 
 
 def hotkey_run(callback: Optional[Callable[[], None]] = None, multiplier_callback: Optional[Callable[[], None]] = None):
