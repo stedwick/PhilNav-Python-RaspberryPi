@@ -10,12 +10,23 @@ PhilNav is a cross-platform head-tracking mouse system with client-server archit
 
 ## Critical Development Rules
 
+### Virtual Environment (MANDATORY)
+
+**ALWAYS activate the virtual environment first before any development work:**
+
+```bash
+source .venv/bin/activate
+```
+
+This is required for all Python operations, including running code, installing packages, and type checking.
+
 ### Type Checking (MANDATORY)
 
 **ALWAYS run `pyright` after any code changes.** This project maintains zero errors and zero warnings across all platforms.
 
 ```bash
-# Check entire project
+# Activate venv first, then check types
+source .venv/bin/activate
 pyright
 
 # Check with statistics
@@ -25,8 +36,6 @@ pyright --stats
 pyright client_win-mac-nix/
 pyright server_raspberrypi/
 ```
-
-The project uses comprehensive type stubs in `stubs/` directory for cross-platform development.
 
 ### Code Quality Standards
 
@@ -40,8 +49,24 @@ The project uses comprehensive type stubs in `stubs/` directory for cross-platfo
 
 - `client_win-mac-nix/`: Cross-platform client code
 - `server_raspberrypi/`: Pi-specific server code
-- `stubs/`: Type stubs for platform-specific libraries
+- `stubs/`: Type stubs for platform-specific libraries (if present)
 - Use `CLAUDE.md` for extended documentation
+
+### Development Commands
+
+```bash
+# ALWAYS activate venv first
+source .venv/bin/activate
+
+# Server (Pi)
+python3 server_raspberrypi/main.py --verbose --preview
+
+# Client (Desktop)
+python3 client_win-mac-nix/main.py --verbose --speed 21 --smooth 3
+
+# Install dependencies
+pip install -r requirements.txt
+```
 
 ### Testing & Validation
 
@@ -49,19 +74,6 @@ The project uses comprehensive type stubs in `stubs/` directory for cross-platfo
 - Use `--verbose` flags for debugging
 - Capture logs for manual verification
 - Document platform coverage in PRs
-
-### Development Commands
-
-```bash
-# Server (Pi)
-python3 server_raspberrypi/main.py --verbose --preview
-
-# Client (Desktop)
-python3 client_win-mac-nix/main.py --verbose --speed 21 --smooth 3
-
-# Virtual environment
-source .venv/bin/activate
-```
 
 ## Deployment Notes
 

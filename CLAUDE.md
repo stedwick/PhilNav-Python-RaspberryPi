@@ -37,6 +37,9 @@ Communication happens over UDP multicast (ports 4245/4246).
 ### Running the Server (Raspberry Pi)
 
 ```bash
+# IMPORTANT: Activate virtual environment first
+source .venv/bin/activate
+
 # Basic run
 python3 server_raspberrypi/main.py
 
@@ -50,6 +53,9 @@ python3 server_raspberrypi/main.py --fps 75 --width 320 --height 240
 ### Running the Client (PC)
 
 ```bash
+# IMPORTANT: Activate virtual environment first
+source .venv/bin/activate
+
 # Basic run
 python3 client_win-mac-nix/main.py
 
@@ -123,6 +129,9 @@ The client automatically detects the platform and loads appropriate mouse/hotkey
 The project includes comprehensive type checking support:
 
 ```bash
+# IMPORTANT: Activate virtual environment first
+source .venv/bin/activate
+
 # Install Pyright (if not already installed)
 pip install pyright
 

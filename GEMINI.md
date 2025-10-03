@@ -10,11 +10,20 @@ The system is built with a client-server architecture:
 
 The communication between the client and server is done using the OpenTrack protocol, with the movement data packed as `struct` doubles.
 
-## Type Checking
+## Virtual Environment & Type Checking
+
+**CRITICAL**: Always activate the virtual environment first before any development work:
+
+```bash
+source .venv/bin/activate
+```
 
 This project uses Pyright for comprehensive static type checking across all platforms (Windows, Mac, Linux, Raspberry Pi). **Always run `pyright` after making any code changes** to ensure type correctness. The project maintains zero errors and zero warnings.
 
 ```bash
+# Activate venv first, then check types
+source .venv/bin/activate
+
 # Check entire project
 pyright
 
