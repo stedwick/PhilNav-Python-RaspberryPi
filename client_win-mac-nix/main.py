@@ -16,6 +16,7 @@ match platform.system():
     case "Darwin":  # macOS
         from mouse_mac import getCursorPos, setCursorPos
         from hotkey_win_mac import hotkey_run
+        from xkeys_mac import xkeys_run, xkeys_devices
     case "Windows":
         from mouse_win import getCursorPos, setCursorPos
         from hotkey_win_mac import hotkey_run
@@ -97,12 +98,23 @@ def toggle_multiplier():
     multiplier_enabled = not multiplier_enabled
     logging.info(f"Speed multiplier ({args.multiplier}x) {'enabled' if multiplier_enabled else 'disabled'}\n")
 
+def set_multiplier(true_or_false):
+    global multiplier_enabled
+    multiplier_enabled = true_or_false
+    logging.info(f"Speed multiplier ({args.multiplier}x) {'enabled' if multiplier_enabled else 'disabled'}\n")
 
 hotkey_thread = Thread(target=hotkey_run, kwargs={
     "callback": toggle, 
     "multiplier_callback": toggle_multiplier
 }, daemon=True)
 hotkey_thread.start()
+
+if platform.system() == "Darwin":
+    for device in xkeys_devices():
+        Thread(target=xkeys_run, kwargs={
+            "device": device,
+            "callback": set_multiplier
+        }, daemon=True).start()
 
 
 # initialize networking
