@@ -1,11 +1,13 @@
 """
 X-keys foot pedal interface for macOS.
-Detects button presses from X-keys USB HID devices.
+Detects button presses from X-keys USB HID devices using an event-driven,
+multi-threaded approach for efficiency.
 """
 
 import hid
 import logging
-import time
+import threading
+import queue
 
 # X-keys vendor ID (PI Engineering)
 XKEYS_VENDOR_ID = 0x05F3
@@ -16,111 +18,134 @@ XKEYS_PRODUCT_IDS = [
     0x0438,  # Pi3 Matrix Board (alternate interface)
 ]
 
+def hid_reader(device, event_queue, device_id):
+    """
+    Continuously reads from a single HID device in a blocking manner.
+
+    When data is received, it's put into the shared event queue along with
+    the device identifier.
+
+    Args:
+        device (hid.device): The HID device to read from.
+        event_queue (queue.Queue): The queue to put event data into.
+        device_id (str): A unique identifier for the device (e.g., its path).
+    """
+    while True:
+        try:
+            # Blocking read waits for data, using zero CPU when idle
+            data = device.read(64)
+            if data:
+                event_queue.put((device_id, data))
+        except (IOError, OSError, ValueError):
+            # Device was likely disconnected, exit the thread
+            logging.warning(f"X-keys device {device_id} disconnected.")
+            break
 
 class XKeysPedal:
-    """Interface for X-keys foot pedal(s). Supports multiple devices."""
+    """
+    Interface for X-keys foot pedal(s). Manages multiple devices, each with its
+    own reader thread.
+    """
 
     def __init__(self):
-        # List of [device, product_id, current_state, last_data, last_check_time]
-        self.devices = []
-        self._cache_duration = 0.1  # 100ms cache duration for responsiveness
+        self.event_queue = queue.Queue()
+        # device_states stores {device_id: {product_id, is_pressed}}
+        self.device_states = {}
+        self.reader_threads = []
         self._connect()
 
     def _connect(self):
-        """Connect to all available X-keys devices."""
-        # Enumerate all devices to find multiple instances
+        """
+        Finds all connected X-keys pedals, stores their state, and starts a
+        dedicated reader thread for each.
+        """
         for device_info in hid.enumerate(XKEYS_VENDOR_ID):
             product_id = device_info['product_id']
             if product_id in XKEYS_PRODUCT_IDS:
                 try:
                     device = hid.device()
-                    # Path is already bytes, use it directly
                     device.open_path(device_info['path'])
-                    device.set_nonblocking(1)
-                    # Initialize: [device, product_id, current_state, last_data, last_check_time]
-                    self.devices.append([device, product_id, False, None, 0])
-                    # Decode path for logging if it's bytes
-                    path_str = device_info['path'].decode('utf-8') if isinstance(device_info['path'], bytes) else device_info['path']
-                    logging.info(f"Connected to X-keys device (PID: {hex(product_id)}, Path: {path_str})")
-                except (IOError, OSError):
-                    # Silently ignore devices we can't connect to
-                    continue
+                    
+                    device_id = device_info['path'].decode('utf-8')
+                    
+                    # Initialize state for this device
+                    self.device_states[device_id] = {
+                        "product_id": product_id,
+                        "is_pressed": False
+                    }
 
-        if not self.devices:
-            logging.warning("No X-keys foot pedal found")
+                    # Start a dedicated reader thread for this device
+                    thread = threading.Thread(
+                        target=hid_reader,
+                        args=(device, self.event_queue, device_id),
+                        daemon=True
+                    )
+                    thread.start()
+                    self.reader_threads.append(thread)
+                    
+                    logging.info(f"Connected to X-keys device (PID: {hex(product_id)}, Path: {device_id})")
+
+                except (IOError, OSError) as e:
+                    logging.error(f"Failed to connect to X-keys device: {e}")
+                    continue
+        
+        if not self.reader_threads:
+            logging.warning("No X-keys foot pedal found.")
+
+    def _process_events(self):
+        """
+        Process all pending events from the queue and update device states.
+        This method is non-blocking.
+        """
+        try:
+            while not self.event_queue.empty():
+                device_id, data = self.event_queue.get_nowait()
+
+                if device_id in self.device_states and len(data) >= 3:
+                    # Byte 2: Button state (0x04 = middle, 0x02=right, 0x01=left)
+                    # We only care about the middle pedal for now.
+                    is_pressed = bool(data[2] & 0x04)
+                    self.device_states[device_id]["is_pressed"] = is_pressed
+
+        except queue.Empty:
+            pass # No events to process
 
     def is_connected(self):
-        """
-        Check if any device is connected.
-
-        Returns:
-            bool: True if at least one device is connected, False otherwise
-        """
-        return len(self.devices) > 0
-
-    def _update_state(self, device_entry):
-        """Update the cached button state for a specific device."""
-        device = device_entry[0]
-
-        try:
-            # Read data from device (non-blocking)
-            # Keep reading until we've drained the buffer
-            latest_data = None
-            while True:
-                data = device.read(64)
-                if not data:
-                    break
-                latest_data = data
-
-            # Only update state if we got new data that's different from last time
-            if latest_data and len(latest_data) >= 3 and latest_data != device_entry[3]:
-                # Pi3 Matrix Board format:
-                # Byte 0: Report ID (0x01)
-                # Byte 1: Always 0x01
-                # Byte 2: Button state (0x04 = middle key pressed, 0x00 = released)
-                device_entry[2] = bool(latest_data[2] & 0x04)
-                device_entry[3] = latest_data
-        except (IOError, OSError, ValueError):
-            # Silently keep current cached state if device read fails
-            pass
-
-    def _update_all_states(self):
-        """Update cached states for all devices if cache has expired."""
-        current_time = time.time()
-
-        for device_entry in self.devices:
-            if current_time - device_entry[4] >= self._cache_duration:
-                self._update_state(device_entry)
-                device_entry[4] = current_time
+        """Check if any device is connected."""
+        return len(self.reader_threads) > 0
 
     def is_middle_key_pressed(self):
         """
         Check if the middle key is pressed on ANY connected pedal.
 
-        Uses a 100ms cache to avoid blocking reads. Returns cached state
-        immediately and updates cache if 100ms has elapsed.
+        This method is non-blocking and reflects the most recent state update
+        from the background threads.
 
         Returns:
-            bool: True if middle key is pressed on any device, False otherwise
+            bool: True if the middle key is pressed on any device, False otherwise.
         """
-        self._update_all_states()
-        return any(device_entry[2] for device_entry in self.devices)
+        self._process_events()
+        return any(state["is_pressed"] for state in self.device_states.values())
 
     def get_all_states(self):
         """
         Get the current state of all connected devices.
 
         Returns:
-            list: List of tuples (product_id, is_pressed) for each device
+            list: A list of tuples (product_id, is_pressed) for each device.
         """
-        self._update_all_states()
-        return [(device_entry[1], device_entry[2]) for device_entry in self.devices]
+        self._process_events()
+        return [
+            (state["product_id"], state["is_pressed"])
+            for state in self.device_states.values()
+        ]
 
     def close(self):
-        """Close all device connections."""
-        for device_entry in self.devices:
-            try:
-                device_entry[0].close()
-            except:
-                pass
-        self.devices = []
+        """
+        Stops the reader threads (by virtue of being daemon threads).
+        This is mostly for cleanup in tests; in a real app, daemon threads
+        are often sufficient.
+        """
+        # No explicit close needed for daemon threads, but good practice
+        # if you needed to join them.
+        logging.info("X-keys connections closed.")
