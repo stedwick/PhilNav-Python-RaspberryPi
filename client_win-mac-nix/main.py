@@ -111,10 +111,11 @@ hotkey_thread.start()
 
 if platform.system() == "Darwin":
     for device in xkeys_devices():
-        Thread(target=xkeys_run, kwargs={
+        thread = Thread(target=xkeys_run, kwargs={
             "device": device,
             "callback": set_multiplier
-        }, daemon=True).start()
+        }, daemon=True)
+        thread.start()
 
 
 # initialize networking

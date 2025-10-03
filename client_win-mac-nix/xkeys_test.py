@@ -45,12 +45,6 @@ def main() -> None:
             time.sleep(1)
     except KeyboardInterrupt:
         print("\nExiting...")
-    finally:
-        for device in devices:
-            try:
-                device.close()
-            except (IOError, OSError, ValueError):
-                pass
 
 
 if __name__ == "__main__":
