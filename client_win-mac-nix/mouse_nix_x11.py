@@ -1,4 +1,7 @@
-from Xlib import display
+try:
+    from Xlib import display  # type: ignore[import-untyped]
+except ImportError:
+    from stubs.xlib_stubs import display  # type: ignore[import-not-found]
 
 my_display = display.Display()
 my_screen = my_display.screen()
