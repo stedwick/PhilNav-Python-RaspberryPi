@@ -1,4 +1,7 @@
-from Xlib import X, display
+try:
+    from Xlib import X, display  # type: ignore[import-untyped]
+except ImportError:
+    from stubs.xlib_stubs import X, display  # type: ignore[import-not-found]
 from time import time
 
 # F7
@@ -36,11 +39,11 @@ def hotkey_run(callback=None, multiplier_callback=None):
             now = time()
             if now - hotkey_time_f7 > 0.25:
                 hotkey_time_f7 = now
-                callback()
+                callback()  # type: ignore[misc]
         
         # Handle F8 key press
         elif (my_event.detail == KEYCODE_F8):
             now = time()
             if now - hotkey_time_f8 > 0.25:
                 hotkey_time_f8 = now
-                multiplier_callback()
+                multiplier_callback()  # type: ignore[misc]
