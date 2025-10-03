@@ -37,6 +37,12 @@ parser.add_argument(
     "-s", "--speed", type=int, default=25, help="mouse speed, default 25"
 )
 parser.add_argument(
+    "--x-speed", type=float, default=None, help="X-axis speed (overrides --speed for X movements), default uses --speed"
+)
+parser.add_argument(
+    "--y-speed", type=float, default=None, help="Y-axis speed (overrides --speed for Y movements), default uses --speed * 1.25"
+)
+parser.add_argument(
     "-S", "--smooth", type=int, default=3, help="averages mouse movements to smooth out jittering, default 3"
 )
 parser.add_argument(
@@ -71,6 +77,12 @@ args = parser.parse_args()
 
 if args.smooth < 1:
     args.smooth = 1
+
+# Set default values for x-speed and y-speed if not provided
+if args.x_speed is None:
+    args.x_speed = args.speed
+if args.y_speed is None:
+    args.y_speed = args.speed * 1.25
 
 if args.verbose:
     logging.getLogger().setLevel(logging.DEBUG)
@@ -275,8 +287,8 @@ while True:
         # Apply speed multiplier if enabled
         multiplier = args.multiplier if multiplier_enabled else 1.0
         
-        x_new = round(x_cur + x_smooth * args.speed * multiplier)
-        y_new = round(y_cur + y_smooth * args.speed * 1.25 * multiplier)
+        x_new = round(x_cur + x_smooth * args.x_speed * multiplier)
+        y_new = round(y_cur + y_smooth * args.y_speed * multiplier)
         setCursorPos(x_new, y_new)  # move mouse cursor
         phil.time_last_moved = time()
 
