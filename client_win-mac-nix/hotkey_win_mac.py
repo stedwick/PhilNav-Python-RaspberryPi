@@ -8,11 +8,7 @@ listener: Optional[keyboard.Listener] = None
 
 def for_canonical(f):
     global listener
-    def wrapper(k):
-        if listener:
-            return f(listener.canonical(k))
-        return None
-    return wrapper
+    return lambda k: f(listener.canonical(k))
 
 
 def hotkey_run(callback: Optional[Callable[[], None]] = None, multiplier_callback: Optional[Callable[[], None]] = None):
@@ -20,13 +16,13 @@ def hotkey_run(callback: Optional[Callable[[], None]] = None, multiplier_callbac
 
     # Shift-F7 hard-coded for now
     hotkey_toggle = keyboard.HotKey(
-        {keyboard.Key.shift, keyboard.Key.f7},  # type: ignore[arg-type]
-        callback or (lambda: None))
+        [keyboard.Key.shift, keyboard.Key.f7.value],
+        callback)
     
     # Shift-F8 for speed multiplier
     hotkey_multiplier = keyboard.HotKey(
-        {keyboard.Key.shift, keyboard.Key.f8},  # type: ignore[arg-type]
-        multiplier_callback or (lambda: None))
+        [keyboard.Key.shift, keyboard.Key.f8.value],
+        multiplier_callback)
 
     listener = keyboard.Listener(
         on_press=lambda k: (
