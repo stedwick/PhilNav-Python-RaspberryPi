@@ -1,11 +1,11 @@
-from typing import Dict, List
+from typing import Dict, Sequence
 
 try:
     from evdev import UInput, ecodes as e  # type: ignore[import-untyped]
 except ImportError:
     from stubs.evdev_stubs import UInput, ecodes as e  # type: ignore[import-not-found]
 
-cap: Dict[int, List[int]] = {
+cap: Dict[int, Sequence[int]] = {
     e.EV_REL: [e.REL_X, e.REL_Y],  # Relative positioning
     e.EV_KEY: [e.BTN_LEFT, e.BTN_RIGHT, e.BTN_MIDDLE],  # Mouse buttons, required to be a mouse
 }

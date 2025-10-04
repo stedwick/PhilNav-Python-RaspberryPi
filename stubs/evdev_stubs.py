@@ -2,7 +2,7 @@
 Stub file for evdev to enable type checking on non-Linux systems.
 This provides the basic API structure for Linux input device handling.
 """
-from typing import Any, Dict, List, Optional, Iterator
+from typing import Dict, Optional, Iterator, Sequence
 import time
 
 class ecodes:
@@ -60,7 +60,7 @@ class InputDevice:
 
 class UInput:
     """Stub for evdev.UInput"""
-    def __init__(self, events: Optional[Dict[int, List[int]]] = None, name: str = "py-evdev-uinput", **kwargs) -> None:
+    def __init__(self, events: Optional[Dict[int, Sequence[int]]] = None, name: str = "py-evdev-uinput", **kwargs) -> None:
         self.name = name
         self.events = events or {}
     
