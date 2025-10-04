@@ -1,18 +1,23 @@
-from typing import Dict, List
+from typing import Dict, List, Sequence, TYPE_CHECKING, cast
 
 try:
     from evdev import UInput, ecodes as e  # type: ignore[import-untyped]
 except ImportError:
     from stubs.evdev_stubs import UInput, ecodes as e  # type: ignore[import-not-found]
 
+if TYPE_CHECKING:
+    CapabilitiesDict = Dict[int, List[int]]
+else:
+    CapabilitiesDict = Dict[int, Sequence[int]]
+
 # Define capabilities for our virtual mouse
-cap: Dict[int, List[int]] = {
+cap: CapabilitiesDict = {
     e.EV_REL: [e.REL_X, e.REL_Y],  # Relative positioning
     e.EV_KEY: [e.BTN_LEFT, e.BTN_RIGHT, e.BTN_MIDDLE],  # Mouse buttons, required to be a mouse
 }
 
 # Create a uinput device
-device = UInput(cap, name='pynav-virtual-mouse')
+device = UInput(cast(Dict[int, List[int]], cap), name='pynav-virtual-mouse')
 
 # We need to track the current position ourselves
 current_x = 0
