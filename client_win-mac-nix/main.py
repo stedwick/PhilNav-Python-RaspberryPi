@@ -78,6 +78,9 @@ parser.add_argument(
 parser.add_argument(
     "--rotate", type=float, default=0, help="rotate mouse movements by N degrees (e.g., 90 for camera on its side), default 0"
 )
+parser.add_argument(
+    "--xkeys", action='store_true', help="enable xkeys for speed multiplier, default False"
+)
 
 args = parser.parse_args()
 
@@ -127,7 +130,7 @@ hotkey_thread = Thread(target=hotkey_run, kwargs={
 }, daemon=True)
 hotkey_thread.start()
 
-if platform.system() == "Darwin":
+if args.xkeys and platform.system() == "Darwin":
     for device in xkeys_devices():
         thread = Thread(target=xkeys_run, kwargs={
             "device": device,
