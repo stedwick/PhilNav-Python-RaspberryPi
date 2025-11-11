@@ -26,9 +26,10 @@ match platform.system():
     case "Linux":
         from mouse_nix_uinput import getCursorPos, setCursorPos
         from hotkey_nix_uinput import hotkey_run
+        from xkeys_mac import xkeys_run, xkeys_devices
         # Define dummy functions for Linux
-        def xkeys_run(*args, **kwargs): pass
-        def xkeys_devices(): return []
+        # def xkeys_run(*args, **kwargs): pass
+        # def xkeys_devices(): return []
     case _:
         raise RuntimeError(
             f"Platform {platform.system()} not supported (not Win, Mac, or Nix)")
@@ -130,7 +131,7 @@ hotkey_thread = Thread(target=hotkey_run, kwargs={
 }, daemon=True)
 hotkey_thread.start()
 
-if args.xkeys and platform.system() == "Darwin":
+if args.xkeys and (platform.system() == "Darwin" or platform.system() == "Linux"):
     for device in xkeys_devices():
         thread = Thread(target=xkeys_run, kwargs={
             "device": device,

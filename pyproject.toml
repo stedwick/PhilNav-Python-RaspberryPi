@@ -6,5 +6,6 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "evdev>=1.9.2",
+    "hid>=1.0.8",
     "python-uinput>=1.0.1",
 ]

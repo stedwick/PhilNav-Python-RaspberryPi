@@ -14,14 +14,14 @@ XKEYS_PRODUCT_IDS = [
 ]
 
 def xkeys_run(
-    device: hid.device, callback: Optional[Callable[[bool], None]] = None
+    device: hid.Device, callback: Optional[Callable[[bool], None]] = None
 ):
     """
     Continuously read pedal events from an opened HID device and invoke the
     supplied callback with the middle-button state (True when pressed).
 
     Args:
-        device: Forwarded ``hid.device`` instance returned by ``xkeys_devices``.
+        device: Forwarded ``hid.Device`` instance returned by ``xkeys_devices``.
         callback: Callable receiving the pedal state as a bool.
     """
     while True:
@@ -39,9 +39,9 @@ def xkeys_run(
             break
 
 def xkeys_devices():
-    """Return all connected X-keys pedals as opened ``hid.device`` objects."""
+    """Return all connected X-keys pedals as opened ``hid.Device`` objects."""
 
-    devices: list[hid.device] = []
+    devices: list[hid.Device] = []
 
     for device_info in hid.enumerate(XKEYS_VENDOR_ID):
         product_id = device_info["product_id"]
@@ -63,8 +63,10 @@ def xkeys_devices():
         )
 
         try:
-            device = hid.device()
-            device.open_path(device_info["path"])
+            # Instantiate the hid.Device with the device path to avoid the
+            # library requiring vid/pid on construction and then calling
+            # open_path. This matches hid's modern API.
+            device = hid.Device(path=device_info["path"])
             devices.append(device)
 
             print(
@@ -72,9 +74,25 @@ def xkeys_devices():
                 % (hex(product_id), device_info["path"], usage, usage_page)
             )
 
-        except (IOError, OSError) as exc:
-            # logging.warning("Failed to connect to X-keys device: %s", exc)
-            pass
+        except (IOError, OSError, ValueError, hid.HIDException) as exc:
+            # Device couldn't be opened or hid.Device() refused the args.
+            # Common causes: insufficient permissions to open /dev/hidraw*,
+            # the device interface is in use by another process, or the
+            # environment doesn't expose the device nodes.
+            vendor = device_info.get("vendor_id")
+            vid_str = hex(vendor) if vendor is not None else "unknown"
+            pid_str = hex(product_id) if product_id is not None else "unknown"
+            logging.warning(
+                "Unable to open X-keys device at %s (VID: %s PID: %s): %s",
+                device_info.get("path"),
+                vid_str,
+                pid_str,
+                exc,
+            )
+            logging.debug(
+                "Hint: try running as root or add your user to the input group / adjust udev rules to allow access to the device.")
+            # Continue scanning other devices instead of crashing.
+            continue
 
     if not devices:
         logging.debug("No X-keys foot pedal found.")

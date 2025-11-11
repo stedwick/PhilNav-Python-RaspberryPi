@@ -9,17 +9,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/63/fe/a17c106a1f4061ce83f04d14bcedcfb2c38c7793ea56bfb906a6fadae8cb/evdev-1.9.2.tar.gz", hash = "sha256:5d3278892ce1f92a74d6bf888cc8525d9f68af85dbe336c95d1c87fb8f423069", size = 33301, upload-time = "2025-05-01T19:53:47.69Z" }
 
 [[package]]
+name = "hid"
+version = "1.0.8"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/29/42/9cd3eab530ffae5e0ff880c575fd18cfdfe292b71f1e9872c392329f35fd/hid-1.0.8.tar.gz", hash = "sha256:5ca129a7b9434ace5e3e429c1092a16792feffaf067a46b666e9c586872cdcfe", size = 4967, upload-time = "2025-06-28T16:20:27.576Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ee/52/24bfaee85a5e25f2d1a389944a3576d408ab3ca935176e892cbef47b92b6/hid-1.0.8-py3-none-any.whl", hash = "sha256:9b6fac92098322ae5d8d839c2bb30620b7533284bcf5f3e6aedcc0483c388046", size = 4949, upload-time = "2025-06-28T16:20:26.745Z" },
+]
+
+[[package]]
 name = "philnav-python-raspberrypi"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "evdev" },
+    { name = "hid" },
     { name = "python-uinput" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "evdev", specifier = ">=1.9.2" },
+    { name = "hid", specifier = ">=1.0.8" },
     { name = "python-uinput", specifier = ">=1.0.1" },
 ]
 
