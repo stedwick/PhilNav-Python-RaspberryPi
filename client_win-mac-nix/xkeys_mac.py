@@ -2,6 +2,7 @@
 
 import hid
 import logging
+import platform
 from typing import Callable, Optional
 
 # X-keys vendor ID (PI Engineering)
@@ -12,6 +13,7 @@ XKEYS_PRODUCT_IDS = [
     0x042C,  # Pi3 Matrix Board
     0x0438,  # Pi3 Matrix Board (alternate interface)
 ]
+
 
 def xkeys_run(
     device: hid.device, callback: Optional[Callable[[bool], None]] = None
@@ -38,6 +40,7 @@ def xkeys_run(
             logging.warning("X-keys device disconnected.")
             break
 
+
 def xkeys_devices():
     """Return all connected X-keys pedals as opened ``hid.device`` objects."""
 
@@ -48,11 +51,15 @@ def xkeys_devices():
         if product_id not in XKEYS_PRODUCT_IDS:
             continue
         usage = device_info.get("usage")
-        if usage != 0x0001:
-            continue
         usage_page = device_info.get("usage_page")
-        if usage_page != 0x000c:
-            continue
+        if platform.system() == "Linux":
+            if device_info.get("interface_number") != 0:
+                continue
+        else:
+            if usage != 0x0001:
+                continue
+            if usage_page != 0x000c:
+                continue
 
         logging.debug(
             "Enumerated X-keys device (PID: %s, Path: %s, usage=0x%04x, usage_page=0x%04x)",

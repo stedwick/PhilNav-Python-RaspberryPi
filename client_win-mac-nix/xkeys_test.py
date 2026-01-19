@@ -9,6 +9,22 @@ import time
 from xkeys_mac import xkeys_devices, xkeys_run
 
 
+def log_hid_diagnostics() -> None:
+    """Print basic HID module diagnostics to help troubleshoot enumeration."""
+    try:
+        import hid  # noqa: WPS433
+    except Exception as exc:
+        logging.warning("Failed to import hid: %s", exc)
+        return
+
+    logging.info("hid module: %s", getattr(hid, "__file__", "<unknown>"))
+    logging.info("hid version: %s", getattr(hid, "__version__", "<unknown>"))
+    try:
+        logging.info("hid.enumerate(0x05f3): %s", hid.enumerate(0x05F3))
+    except Exception as exc:
+        logging.warning("hid.enumerate failed: %s", exc)
+
+
 def log_state(is_pressed: bool) -> None:
     status = "PRESSED" if is_pressed else "RELEASED"
     logging.info("Middle pedal %s", status)
@@ -23,6 +39,8 @@ def main() -> None:
 
     print("X-keys Foot Pedal Callback Test")
     print("Press Ctrl-C to exit\n")
+
+    log_hid_diagnostics()
 
     devices = xkeys_devices()
     if not devices:
