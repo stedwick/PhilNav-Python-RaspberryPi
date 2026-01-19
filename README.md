@@ -95,6 +95,35 @@ echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d
 sudo shutdown -r now
 ```
 
+#### Note: Linux X-keys foot pedal (HIDAPI)
+On Linux, the X-keys pedal uses HIDAPI and requires USB device access (not just `hidraw`). If `xkeys_test.py` says "No X-keys device found" or logs `open failed`, add a udev rule for the USB device:
+
+```
+# Create a udev rule for the X-keys USB device
+sudo tee /etc/udev/rules.d/99-xkeys-usb.rules >/dev/null <<'EOF'
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="05f3", MODE="0660", GROUP="plugdev"
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="05f3", ATTR{idProduct}=="042c", MODE="0660", GROUP="plugdev"
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="05f3", ATTR{idProduct}=="0438", MODE="0660", GROUP="plugdev"
+EOF
+
+# Reload rules and replug the device
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+Make sure your user is in the `plugdev` group:
+
+```
+groups
+sudo usermod -aG plugdev $USER
+```
+
+Log out/in (or reboot), then re-run:
+
+```
+python3 client_win-mac-nix/xkeys_test.py
+```
+
 ## Building PhilNav
 
 Watch the YouTube video here:
