@@ -21,7 +21,7 @@ match platform.system():
         from mouse_win import getCursorPos, setCursorPos
         from hotkey_win_mac import hotkey_run
     case "Linux":
-        from mouse_nix_uinput import getCursorPos, setCursorPos
+        from mouse_nix_uinput import getCursorPos, setCursorPos, click_left
         from hotkey_nix_uinput import hotkey_run
         from xkeys_mac import xkeys_run, xkeys_devices
     case _:
@@ -116,6 +116,14 @@ def set_multiplier(true_or_false):
     multiplier_enabled = true_or_false
     logging.info(f"Speed multiplier ({args.multiplier}x) {'enabled' if multiplier_enabled else 'disabled'}\n")
 
+def handle_pedal(is_pressed: bool):
+    if platform.system() == "Linux":
+        if is_pressed:
+            click_left()
+        set_multiplier(is_pressed)
+    else:
+        set_multiplier(is_pressed)
+
 hotkey_thread = Thread(target=hotkey_run, kwargs={
     "callback": toggle, 
     "multiplier_callback": toggle_multiplier
@@ -126,7 +134,7 @@ if platform.system() in ("Darwin", "Linux"):
     for device in xkeys_devices():
         thread = Thread(target=xkeys_run, kwargs={
             "device": device,
-            "callback": set_multiplier
+            "callback": handle_pedal
         }, daemon=True)
         thread.start()
 

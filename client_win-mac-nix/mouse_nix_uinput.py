@@ -37,6 +37,13 @@ def setCursorPos(x, y):
     device.write(e.EV_REL, e.REL_Y, dy)
     device.syn()  # Synchronize state
 
+
+def click_left():
+    device.write(e.EV_KEY, e.BTN_LEFT, 1)
+    device.syn()
+    device.write(e.EV_KEY, e.BTN_LEFT, 0)
+    device.syn()
+
 # Updated Prompt: Switch it to using evdev @https://python-evdev.readthedocs.io/en/latest/tutorial.html#specifying-uinput-device-options 
 
 # Key changes from the previous version:
